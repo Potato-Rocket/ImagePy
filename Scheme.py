@@ -4,10 +4,10 @@ from PIL import Image
 
 
 def colordif(pix1, pix2):
-    combo = [abs(pix1[0] - pix2[0]),
+    c = [abs(pix1[0] - pix2[0]),
              abs(pix1[1] - pix2[1]),
              abs(pix1[2] - pix2[2])]
-    return round(sum(combo) / 3)
+    return round(sum(c) / 3)
 
 
 def tohex(col):
@@ -20,6 +20,19 @@ def tohex(col):
     return string.upper()
 
 
+def binimage(img):
+    print('Initiating array...')
+    pxmp = np.array([[[0, 0, 0]] * image.width] * image.height, dtype=np.int8)
+    print('Populating array...')
+    for y in range(image.height):
+        print(str(y * image.width) + '/' + str(count))
+        for x in range(image.width):
+            px = image.getpixel((x, y))
+            for p in range(3):
+                pxmp[y][x][p] = px[p]
+    return pxmp
+
+
 os.chdir('/home/oscar/Pictures/Gimp/Exports/')
 file = 'Test Image.png'
 
@@ -27,16 +40,8 @@ print('Opening image...')
 image = Image.open(file)
 count = image.width * image.height
 print(str(count) + ' pixels.')
-print('Initiating array...')
-pixmap = np.array([[[0, 0, 0]] * image.width] * image.height, dtype=np.int8)
 
-print('Populating array...')
-for y in range(image.height):
-    print(str(y * image.width) + '/' + str(count))
-    for x in range(image.width):
-        pix = image.getpixel((x, y))
-        for p in range(3):
-            pixmap[y][x][p] = pix[p]
+pixmap = binimage(image)
 
 print('Flattening array...')
 pixels = np.reshape(pixmap, (count, 3))
@@ -84,7 +89,7 @@ with open('Pallete.txt', 'w') as output:
     output.writelines(lines)
 
 outimg = Image.new('RGB', (50 * len(colors), 100), 'black')
-for c in range(len(colors)):
+for color in range(len(colors)):
     for x in range(50):
         for y in range(100):
             outimg.putpixel((x + (50 * c), y), (colors[c][0], colors[c][1], colors[c][2]))
