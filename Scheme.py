@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from PIL import Image
 
@@ -7,6 +8,11 @@ def colordif(pix1, pix2):
          abs(pix1[1] - pix2[1]),
          abs(pix1[2] - pix2[2])]
     return round(sum(c) / 3)
+
+
+def getavg(data):
+    avg = np.round(np.average(data, axis=0)).astype(np.int)
+    return avg.tolist()
 
 
 def tohex(col):
@@ -20,9 +26,9 @@ def tohex(col):
 
 
 def binpixels(img, coords, rad):
-    sy = coords[0] - rad
-    sx = coords[1] - rad
-    w = (rad * 2) + 1
+    sy = coords[0]
+    sx = coords[1]
+    w = rad + 1
     pxls = []
     for y in range(w):
         for x in range(w):
@@ -31,21 +37,24 @@ def binpixels(img, coords, rad):
                 pxls.append([px[0], px[1], px[2]])
             except IndexError:
                 pass
-    arr = np.add.reduce(np.array(pxls))
-    px = [int(round(arr[0] / len(pxls))),
-          int(round(arr[1] / len(pxls))),
-          int(round(arr[2] / len(pxls)))]
-    return px
+    return getavg(pxls)
 
 
 def binimage(img, rad):
+    w = math.floor(img.width / (rad + 1))
+    print(img.width, w, w * (rad + 1))
+    h = math.floor(img.height / (rad + 1))
+    binned = Image.new('RGB', (w, h), 'white')
     print('Initiating array...')
-    pxmp = np.array([[[0, 0, 0]] * img.width] * img.height, dtype=np.int8)
+    pxmp = np.array([[[0, 0, 0]] * w] * h, dtype=np.int8)
     print('Populating array...')
-    for y in range(img.height):
-        for x in range(img.width):
-            print(x, y)
-            pxmp[y][x] = binpixels(img, (y, x), rad)
+    for y in range(h):
+        for x in range(w):
+            px = binpixels(img, (y * (rad + 1), x * (rad + 1)), rad)
+            pxmp[y][x] = px
+            binned.putpixel((x, y), (px[0], px[1], px[2]))
+        print(y, h)
+    binned.save('Binned.png')
     return pxmp
 
 
@@ -66,7 +75,6 @@ def groupx(pxls, thresh):
     print('Starting grouping process...')
     grps = []
     while False in added:
-        print(added.count(True))
         p = added.index(False)
         px = pxls[p]
         grps.append([])
@@ -79,6 +87,7 @@ def groupx(pxls, thresh):
                     grps[-1].append(p.tolist())
                     added[x] = True
             x += 1
+        print(added.count(True))
     return grps
 
 
@@ -87,10 +96,7 @@ def merge(grps):
     rgb = []
     hx = []
     for grp in grps:
-        array = np.add.reduce(np.array(grp))
-        c = [int(round(array[0] / len(grp))),
-             int(round(array[1] / len(grp))),
-             int(round(array[2] / len(grp)))]
+        c = getavg(grp)
         rgb.append(c)
         hx.append(tohex(c))
     return rgb, hx
@@ -109,19 +115,21 @@ def output(rgb, hx):
     out.save('Palette.png')
 
 
-path = '/home/oscar/Pictures/Gimp/Exports/'
-file = 'Test Image.png'
+path = '/usr/share/backgrounds/'
+file = 'Sand Dune.png'
 
 print('Opening image...')
 image = Image.open(path + file)
 count = image.width * image.height
 print(str(count) + ' pixels.')
 
-pixmap = binimage(image, 4)
+pixmap = binimage(image, 3)
+
+count = pixmap.shape[0] * pixmap.shape[1]
 
 pixels = preparr(pixmap)
 
-groups = groupx(pixels, 16)
+groups = groupx(pixels, 24)
 
 rgbs, hexs = merge(groups)
 
