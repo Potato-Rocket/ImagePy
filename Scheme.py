@@ -1,4 +1,3 @@
-import os
 import numpy as np
 from PIL import Image
 
@@ -80,11 +79,24 @@ def merge(grps):
     return rgb, hx
 
 
-os.chdir('/home/oscar/Pictures/Gimp/Exports/')
+def output(rgb, hx):
+    with open('Pallete.txt', 'w') as out:
+        lines = ['From ' + file + ':\n', '\n']
+        lines.extend([c + '\n' for c in hx])
+        out.writelines(lines)
+    out = Image.new('RGB', (50 * len(rgbs), 100), 'black')
+    for c in range(len(rgb)):
+        for x in range(50):
+            for y in range(100):
+                out.putpixel((x + (50 * c), y), (rgb[c][0], rgb[c][1], rgb[c][2]))
+    out.save('Palette.png')
+
+
+path = '/home/oscar/Pictures/Gimp/Exports/'
 file = 'Test Image.png'
 
 print('Opening image...')
-image = Image.open(file)
+image = Image.open(path + file)
 count = image.width * image.height
 print(str(count) + ' pixels.')
 
@@ -96,14 +108,4 @@ groups = groupx(pixels, 16)
 
 rgbs, hexs = merge(groups)
 
-with open('Pallete.txt', 'w') as output:
-    lines = ['From ' + file + ':\n', '\n']
-    lines.extend([color + '\n' for color in hexs])
-    output.writelines(lines)
-
-outimg = Image.new('RGB', (50 * len(rgbs), 100), 'black')
-for c in range(len(rgbs)):
-    for x in range(50):
-        for y in range(100):
-            outimg.putpixel((x + (50 * c), y), (rgbs[c][0], rgbs[c][1], rgbs[c][2]))
-outimg.save('Palette.png')
+output(rgbs, hexs)
