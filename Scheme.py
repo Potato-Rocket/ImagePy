@@ -22,12 +22,12 @@ def tohex(col):
 
 def binimage(img):
     print('Initiating array...')
-    pxmp = np.array([[[0, 0, 0]] * image.width] * image.height, dtype=np.int8)
+    pxmp = np.array([[[0, 0, 0]] * img.width] * img.height, dtype=np.int8)
     print('Populating array...')
-    for y in range(image.height):
-        print(str(y * image.width) + '/' + str(count))
-        for x in range(image.width):
-            px = image.getpixel((x, y))
+    for y in range(img.height):
+        print(str(y * img.width) + '/' + str(count))
+        for x in range(img.width):
+            px = img.getpixel((x, y))
             for p in range(3):
                 pxmp[y][x][p] = px[p]
     return pxmp
@@ -35,13 +35,49 @@ def binimage(img):
 
 def preparr(arr):
     print('Flattening array...')
-    px = np.reshape(pixmap, (count, 3))
+    px = np.reshape(arr, (count, 3))
     px = px.astype(np.int16)
     print('Ensuring no negative values...')
     for p in px:
         for x in range(3):
             p[x] = abs(p[x])
     return px
+
+
+def groupx(pxls, thresh):
+    print('Initiating index array...')
+    added = [False] * count
+    print('Starting grouping process...')
+    grps = []
+    while False in added:
+        print(added.count(True))
+        p = added.index(False)
+        px = pxls[p]
+        grps.append([])
+        x = 0
+        while len(pxls) > x:
+            p = pxls[x]
+            if not added[x]:
+                dif = colordif(px, p)
+                if dif < thresh:
+                    grps[-1].append(p.tolist())
+                    added[x] = True
+            x += 1
+    return grps
+
+
+def merge(grps):
+    print('Merging groups...')
+    rgb = []
+    hx = []
+    for grp in grps:
+        array = np.add.reduce(np.array(grp))
+        c = [int(round(array[0] / len(grp))),
+             int(round(array[1] / len(grp))),
+             int(round(array[2] / len(grp)))]
+        rgb.append(c)
+        hx.append(tohex(c))
+    return rgb, hx
 
 
 os.chdir('/home/oscar/Pictures/Gimp/Exports/')
@@ -56,45 +92,18 @@ pixmap = binimage(image)
 
 pixels = preparr(pixmap)
 
-print('Initiating index array...')
-added = [False] * count
+groups = groupx(pixels, 16)
 
-print('Starting grouping process...')
-groups = []
-while False in added:
-    print(added.count(True))
-    p = added.index(False)
-    pixel = pixels[p]
-    groups.append([])
-    x = 0
-    while len(pixels) > x:
-        pix = pixels[x]
-        if not added[x]:
-            dif = colordif(pixel, pix)
-            if dif < 16:
-                groups[-1].append(pix.tolist())
-                added[x] = True
-        x += 1
-
-print('Merging groups...')
-colors = []
-hexcol = []
-for group in groups:
-    array = np.add.reduce(np.array(group))
-    color = [int(round(array[0] / len(group))),
-             int(round(array[1] / len(group))),
-             int(round(array[2] / len(group)))]
-    colors.append(color)
-    hexcol.append(tohex(color))
+rgbs, hexs = merge(groups)
 
 with open('Pallete.txt', 'w') as output:
     lines = ['From ' + file + ':\n', '\n']
-    lines.extend([color + '\n' for color in hexcol])
+    lines.extend([color + '\n' for color in hexs])
     output.writelines(lines)
 
-outimg = Image.new('RGB', (50 * len(colors), 100), 'black')
-for color in range(len(colors)):
+outimg = Image.new('RGB', (50 * len(rgbs), 100), 'black')
+for c in range(len(rgbs)):
     for x in range(50):
         for y in range(100):
-            outimg.putpixel((x + (50 * c), y), (colors[c][0], colors[c][1], colors[c][2]))
+            outimg.putpixel((x + (50 * c), y), (rgbs[c][0], rgbs[c][1], rgbs[c][2]))
 outimg.save('Palette.png')
