@@ -19,16 +19,33 @@ def tohex(col):
     return string.upper()
 
 
-def binimage(img):
+def binpixels(img, coords, rad):
+    sy = coords[0] - rad
+    sx = coords[1] - rad
+    w = (rad * 2) + 1
+    pxls = []
+    for y in range(w):
+        for x in range(w):
+            try:
+                px = img.getpixel((sx + x, sy + y))
+                pxls.append([px[0], px[1], px[2]])
+            except IndexError:
+                pass
+    arr = np.add.reduce(np.array(pxls))
+    px = [int(round(arr[0] / len(pxls))),
+          int(round(arr[1] / len(pxls))),
+          int(round(arr[2] / len(pxls)))]
+    return px
+
+
+def binimage(img, rad):
     print('Initiating array...')
     pxmp = np.array([[[0, 0, 0]] * img.width] * img.height, dtype=np.int8)
     print('Populating array...')
     for y in range(img.height):
-        print(str(y * img.width) + '/' + str(count))
         for x in range(img.width):
-            px = img.getpixel((x, y))
-            for p in range(3):
-                pxmp[y][x][p] = px[p]
+            print(x, y)
+            pxmp[y][x] = binpixels(img, (y, x), rad)
     return pxmp
 
 
@@ -100,7 +117,7 @@ image = Image.open(path + file)
 count = image.width * image.height
 print(str(count) + ' pixels.')
 
-pixmap = binimage(image)
+pixmap = binimage(image, 4)
 
 pixels = preparr(pixmap)
 
