@@ -5,8 +5,8 @@ from PIL import Image
 
 def colordif(pix1, pix2):
     c = [abs(pix1[0] - pix2[0]),
-             abs(pix1[1] - pix2[1]),
-             abs(pix1[2] - pix2[2])]
+         abs(pix1[1] - pix2[1]),
+         abs(pix1[2] - pix2[2])]
     return round(sum(c) / 3)
 
 
@@ -33,6 +33,17 @@ def binimage(img):
     return pxmp
 
 
+def preparr(arr):
+    print('Flattening array...')
+    px = np.reshape(pixmap, (count, 3))
+    px = px.astype(np.int16)
+    print('Ensuring no negative values...')
+    for p in px:
+        for x in range(3):
+            p[x] = abs(p[x])
+    return px
+
+
 os.chdir('/home/oscar/Pictures/Gimp/Exports/')
 file = 'Test Image.png'
 
@@ -43,14 +54,7 @@ print(str(count) + ' pixels.')
 
 pixmap = binimage(image)
 
-print('Flattening array...')
-pixels = np.reshape(pixmap, (count, 3))
-pixels = pixels.astype(np.int16)
-
-print('Ensuring no negative values...')
-for pix in pixels:
-    for x in range(3):
-        pix[x] = abs(pix[x])
+pixels = preparr(pixmap)
 
 print('Initiating index array...')
 added = [False] * count
