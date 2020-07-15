@@ -17,7 +17,7 @@ def colordif(pix1, pix2):
          abs(pix1[1] - pix2[1]),  # Green
          abs(pix1[2] - pix2[2])]  # Blue
     # Return the squared average difference
-    return round(sum(c) / 3) ** 2
+    return round(sum(c) / 3)
 
 
 # Returns the average color of a set of colors, using NumPy
@@ -135,63 +135,80 @@ def groupx(pxls, thresh):
 
 # Get the average color for each group
 def merge(grps):
+    gps = grps.copy()
     print('Merging groups...')
     # Start rgb and hex color lists
     rgb = []
     hx = []
+    lw = []
     # For each group
-    for grp in grps:
-        print(len(grp))
-        # If there are more then a certain number of pixels in the group
-        if len(grp) > 32:
-            # Add the average color for the group to the rgb and hex lists
-            c = getavg(grp)
-            rgb.append(c)
-            hx.append(tohex(c))
+    for grp in gps:
+        lw.append(len(grp))
+        # Add the average color for the group to the rgb and hex lists
+        c = getavg(grp)
+        rgb.append(c)
+        hx.append(tohex(c))
     # Return the lists of color values
-    return rgb, hx
+    return rgb, hx, lw
 
 
 # Output the generated list of colors
-def output(rgb, hx):
-    # Open Pallete.txt to write
-    with open('Pallete.txt', 'w') as out:
+def output(rgb, hx, lw):
+    # Open palette.txt to write
+    with open('palette.txt', 'w') as out:
         # Create a list of lines starting with info about the base image
         lines = ['From ' + file + ':\n', '\n']
         # Add the hex color values to the list of lines and write the lines
         lines.extend([c + '\n' for c in hx])
         out.writelines(lines)
-    # Create a new image to display the color pallete
-    out = Image.new('RGB', (50 * len(rgbs), 100), 'black')
+    # Create a new image to display the color palette
+    out = Image.new('RGB', (100 * len(rgbs), 1150), 'black')
+    # Get the most common color
+    most = max(lw)
     # For each color, iterate over a 50x100 block
     for c in range(len(rgb)):
-        for x in range(50):
+        for x in range(100):
+            for y in range(int(1000 * lw[c] / most)):
+                # Fill in the current color based on its occurence
+                out.putpixel((x + (100 * c), 999 - y), (rgb[c][0], rgb[c][1], rgb[c][2]))
+        for x in range(100):
             for y in range(100):
                 # Fill in the current color
-                out.putpixel((x + (50 * c), y), (rgb[c][0], rgb[c][1], rgb[c][2]))
+                out.putpixel((x + (100 * c), 1149 - y), (rgb[c][0], rgb[c][1], rgb[c][2]))
     out.save('Palette.png')
 
 
+binning = 9
+threshold = 32
+prev = True
+
 # Choose an image and image directory
-# path = '/usr/share/backgrounds/'
-path = '/home/oscar/Pictures/Gimp/Exports/'
-file = 'Mechanized Metropolis.png'
+path = '/usr/share/backgrounds/'
+# path = '/home/oscar/Pictures/Gimp/Exports/'
+file = 'Chameleon.jpg'
 # file = 'Test Image.png'
+
+if prev:
+    imgpath = './Binned.png'
+    binln = 0
+else:
+    imgpath = path + file
+    binln = binning
 
 print('Opening image...')
 # Open the image and get info about the image
-image = Image.open(path + file)
+image = Image.open(imgpath)
 count = image.width * image.height
 print(str(count) + ' pixels.')
 
-pixmap = binimage(image, 2)
+pixmap = binimage(image, binln)
 
 count = pixmap.shape[0] * pixmap.shape[1]
 
 pixels = preparr(pixmap)
 
-groups = groupx(pixels, 50)
+groups = groupx(pixels, threshold)
 
-rgbs, hexs = merge(groups)
+rgbs, hexs, lens = merge(groups)
 
-output(rgbs, hexs)
+output(rgbs, hexs, lens)
