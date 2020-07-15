@@ -1,23 +1,26 @@
 import math
-import random
 import numpy as np
 from PIL import Image
 
 
-# Get the value of a color
-def colorval(pix):
-    avg = int(sum(pix[0:3]))
-    return avg
+def getvar(data):
+    mean = getavg(data)
+    difs = [colordif(x, mean) ** 2 for x in data]
+    variance = math.sqrt(sum(difs) / len(difs))
+    return int(variance)
 
 
 # Get diference between two RGB values
 def colordif(pix1, pix2):
     # Get the difference between each two pixel's color value
-    c = [abs(pix1[0] - pix2[0]),  # Red
-         abs(pix1[1] - pix2[1]),  # Green
-         abs(pix1[2] - pix2[2])]  # Blue
-    # Return the squared average difference
-    return round(sum(c) / 3)
+    c = [pix1[0] - pix2[0],  # Red
+         pix1[1] - pix2[1],  # Green
+         pix1[2] - pix2[2]]  # Blue
+    c = [abs(v) ** 2 for v in c]
+    dis = math.sqrt(c[0] + c[1])
+    dis = math.sqrt(dis ** 2 + c[2])
+    # Return the average difference
+    return int(dis)
 
 
 # Returns the average color of a set of colors, using NumPy
@@ -63,8 +66,13 @@ def binpixels(img, coords, rad):
                 pxls.append([px[0], px[1], px[2]])
             except IndexError:
                 pass
+    variance = getvar(pxls)
+    if variance > 32:
+        px = np.array([0, 0, 0])
+    else:
+        px = getavg(pxls)
     # Return the average color of the list of pixels
-    return getavg(pxls)
+    return px
 
 
 # Move image pixels to an array, and scale down using the average for chunks of pixels
@@ -76,14 +84,13 @@ def binimage(img, rad):
     binned = Image.new('RGB', (w, h), 'white')
     print('Initiating array...')
     # Create an array for the pixels
-    pxmp = np.array([[[0, 0, 0, 0]] * w] * h)
+    pxmp = np.array([[[0, 0, 0]] * w] * h)
     print('Populating array...')
     # Iterate through x and y, for the predetermined width and height
     for y in range(h):
         for x in range(w):
             # Get the average value for this pixel and surrounding pixels
             px = binpixels(img, (y * (rad + 1), x * (rad + 1)), rad)
-            px = np.append(px, 0)
             # Add it to the list of pixels and the new image
             pxmp[y][x] = px
             binned.putpixel((x, y), (px[0], px[1], px[2]))
@@ -97,7 +104,10 @@ def binimage(img, rad):
 def preparr(arr):
     print('Flattening array...')
     # Reshape the 2D pixel array to a 1D pixel array
-    px = np.reshape(arr, (count, 4))
+    px = np.reshape(arr, (count, 3))
+    print(px)
+    px = px[np.logical_not(np.logical_and(px[:, 0] == 0, px[:, 1] == 0, px[:, 2] == 0))]
+    print(px)
     # Return the new array
     return px
 
@@ -141,9 +151,18 @@ def merge(grps):
     rgb = []
     hx = []
     lw = []
-    # For each group
     for grp in gps:
         lw.append(len(grp))
+    thresh = int(max(lw) / 1000)
+    x = 0
+    while x < len(lw):
+        if lw[x] < thresh:
+            lw.pop(x)
+            gps.pop(x)
+        else:
+            x += 1
+    # For each group
+    for grp in gps:
         # Add the average color for the group to the rgb and hex lists
         c = getavg(grp)
         rgb.append(c)
@@ -178,14 +197,14 @@ def output(rgb, hx, lw):
     out.save('Palette.png')
 
 
-binning = 9
-threshold = 32
-prev = True
+binning = 4
+threshold = 64
+prev = False
 
 # Choose an image and image directory
 path = '/usr/share/backgrounds/'
 # path = '/home/oscar/Pictures/Gimp/Exports/'
-file = 'Chameleon.jpg'
+file = 'The Empty Valley.png'
 # file = 'Test Image.png'
 
 if prev:
