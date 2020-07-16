@@ -9,12 +9,18 @@ from multiprocessing import Process, cpu_count
 
 class GetColors:
     # Initiates the class to get a color palette
-    def __init__(self, img, pxbin, thresh):
+    def __init__(self, img, pxbin, thresh, size):
         print('Opening image...')
         self.binning = pxbin
         self.threshold = thresh
         # Open the image and get info about the image
         self.image = Image.open(img)
+        print('Downsizing image...')
+        width, height = self.image.size
+        if width > size:
+            ratio = size / width
+            self.image = self.image.resize((size, int(height * ratio)))
+        self.image.save('Downsized.png')
         self.count = self.image.width * self.image.height
         self.cores = cpu_count()
         print(str(self.count) + ' pixels.')
@@ -271,18 +277,19 @@ class GetColors:
 
 
 binning = 4
-threshold = 64
+threshold = 48
+sizelimit = 2560
 prev = False
 
 # Choose an image and image directory
 path = '/usr/share/backgrounds/'
 # path = '/home/oscar/Pictures/Gimp/Exports/'
-file = 'The Empty Valley.png'
+file = 'Mechanized Metropolis.png'
 # file = 'Test Image.png'
 
 if prev:
-    imgcolor = GetColors('Binned.png', 0, threshold)
+    imgcolor = GetColors('Binned.png', 0, threshold, sizelimit)
 else:
-    imgcolor = GetColors(path + file, binning, threshold)
+    imgcolor = GetColors(path + file, binning, threshold, sizelimit)
 
 imgcolor.run()
