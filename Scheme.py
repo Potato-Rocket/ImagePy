@@ -2,6 +2,12 @@ import math
 import colorsys
 import numpy as np
 from PIL import Image
+from multiprocessing import Process, cpu_count
+
+
+class MultiProcess:
+    def __init__(self):
+        self.cores = cpu_count()
 
 
 class GetColors:
@@ -23,15 +29,13 @@ class GetColors:
         rgbs, lens = self.sortcols(rgbs, lens)
         self.output(rgbs, lens)
 
-    # Get variance of a set of pixels
-    def getvar(self, data):
-        mean = self.getavg(data)
-        if len(np.shape(np.array(data))) == 2:
-            difs = [self.colordif(x, mean) ** 2 for x in data]
-        else:
-            difs = [abs(x - mean) ** 2 for x in data]
-        variance = math.sqrt(sum(difs) / len(difs))
-        return int(variance)
+    # Returns the average color of a set of colors, using NumPy
+    @staticmethod
+    def getavg(data):
+        # Get the NumPy rounded average
+        avg = np.round(np.average(data, axis=0))
+        # Return as an int
+        return avg.astype(np.int64)
 
     # Get diference between two RGB values
     @staticmethod
@@ -46,13 +50,17 @@ class GetColors:
         # Return the average difference
         return int(dis)
 
-    # Returns the average color of a set of colors, using NumPy
+    # Sort the color pallete by hue, saturation, or value
     @staticmethod
-    def getavg(data):
-        # Get the NumPy rounded average
-        avg = np.round(np.average(data, axis=0))
-        # Return as an int
-        return avg.astype(np.int64)
+    def sortcols(rgb, lw):
+        # Combine the lengths and colors so they get sorted together
+        cols = [np.append(rgb[x], lw[x]) for x in range(len(lw))]
+        # Sort by converting to hsv
+        sort = sorted(cols, key=lambda x: colorsys.rgb_to_hsv(x[0], x[1], x[2])[0])
+        # Separate and return the colors and lengths
+        cols = [x[0:3] for x in sort]
+        lws = [x[3] for x in sort]
+        return cols, lws
 
     # Converts an RGB value to a hex string
     @staticmethod
@@ -70,6 +78,16 @@ class GetColors:
             string += h
         # Returns the string in all caps
         return string.upper()
+
+    # Get variance of a set of pixels
+    def getvar(self, data):
+        mean = self.getavg(data)
+        if len(np.shape(np.array(data))) == 2:
+            difs = [self.colordif(x, mean) ** 2 for x in data]
+        else:
+            difs = [abs(x - mean) ** 2 for x in data]
+        variance = math.sqrt(sum(difs) / len(difs))
+        return int(variance)
 
     # Gets value for a pixel based on surrounding pixels
     def binpixels(self, img, coords, rad):
@@ -189,18 +207,6 @@ class GetColors:
         # Return the lists of color values
         return col, lw
 
-    # Sort the color pallete by hue, saturation, or value
-    @staticmethod
-    def sortcols(rgb, lw):
-        # Combine the lengths and colors so they get sorted together
-        cols = [np.append(rgb[x], lw[x]) for x in range(len(lw))]
-        # Sort by converting to hsv
-        sort = sorted(cols, key=lambda x: colorsys.rgb_to_hsv(x[0], x[1], x[2])[0])
-        # Separate and return the colors and lengths
-        cols = [x[0:3] for x in sort]
-        lws = [x[3] for x in sort]
-        return cols, lws
-
     # Output the generated list of colors
     def output(self, rgb, lw):
         # Open palette.txt to write
@@ -234,14 +240,14 @@ class GetColors:
         out.save('Palette.png')
 
 
-binning = 4
+binning = 9
 threshold = 48
 prev = False
 
 # Choose an image and image directory
 path = '/usr/share/backgrounds/'
 # path = '/home/oscar/Pictures/Gimp/Exports/'
-file = 'Resistance Fighters.jpg'
+file = 'The Empty Valley.png'
 # file = 'Test Image.png'
 
 if prev:
