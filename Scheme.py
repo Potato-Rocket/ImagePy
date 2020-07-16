@@ -1,7 +1,9 @@
 import os
+import sys
 import csv
 import math
 import colorsys
+
 import numpy as np
 from PIL import Image
 from multiprocessing import Process, cpu_count
@@ -15,15 +17,14 @@ class GetColors:
         self.threshold = thresh
         # Open the image and get info about the image
         self.image = Image.open(img)
-        print('Downsizing image...')
         width, height = self.image.size
         if width > size:
+            print('Downsizing image...')
             ratio = size / width
             self.image = self.image.resize((size, int(height * ratio)))
         self.image.save('Downsized.png')
         self.count = self.image.width * self.image.height
         self.cores = cpu_count()
-        print(str(self.count) + ' pixels.')
 
     # Runs all functions required to get the color pallete
     def run(self):
@@ -38,6 +39,7 @@ class GetColors:
         for t in threads:
             t.join()
 
+        print('Combining threads...')
         pixmap = np.array([])
         width = 0
         height = 0
@@ -92,7 +94,9 @@ class GetColors:
     @staticmethod
     def sortcols(rgb, lw):
         # Combine the lengths and colors so they get sorted together
-        cols = [np.append(rgb[x], lw[x]) for x in range(len(lw))]
+        lws = np.array(lw)
+        lws = np.reshape(lws, (np.shape(lws)[0], 1))
+        cols = np.append(rgb, lws, axis=1)
         # Sort by converting to hsv
         sort = sorted(cols, key=lambda x: colorsys.rgb_to_hsv(x[0], x[1], x[2])[0])
         # Separate and return the colors and lengths
@@ -119,11 +123,12 @@ class GetColors:
 
     # Get variance of a set of pixels
     def getvar(self, data):
-        mean = self.getavg(data)
-        if len(np.shape(np.array(data))) == 2:
-            difs = [self.colordif(x, mean) ** 2 for x in data]
+        dat = np.array(data)
+        mean = self.getavg(dat)
+        if len(np.shape(dat)) == 2:
+            difs = np.apply_along_axis(self.colordif, 1, dat, mean) ** 2
         else:
-            difs = [abs(x - mean) ** 2 for x in data]
+            difs = abs(dat - mean) ** 2
         variance = math.sqrt(sum(difs) / len(difs))
         return int(variance)
 
@@ -284,7 +289,7 @@ prev = False
 # Choose an image and image directory
 path = '/usr/share/backgrounds/'
 # path = '/home/oscar/Pictures/Gimp/Exports/'
-file = 'Mechanized Metropolis.png'
+file = 'The Empty Valley.png'
 # file = 'Test Image.png'
 
 if prev:
