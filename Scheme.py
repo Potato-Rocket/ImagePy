@@ -1,8 +1,10 @@
 import math
+import colorsys
 import numpy as np
 from PIL import Image
 
 
+# Get variance of a set of pixels
 def getvar(data):
     mean = getavg(data)
     difs = [colordif(x, mean) ** 2 for x in data]
@@ -105,9 +107,8 @@ def preparr(arr):
     print('Flattening array...')
     # Reshape the 2D pixel array to a 1D pixel array
     px = np.reshape(arr, (count, 3))
-    print(px)
-    px = px[np.logical_not(np.logical_and(px[:, 0] == 0, px[:, 1] == 0, px[:, 2] == 0))]
-    print(px)
+    # Removes all colors darker than [16, 16, 16]
+    px = px[np.logical_not(np.logical_and(px[:, 0] < 17, px[:, 1] < 17, px[:, 2] < 17))]
     # Return the new array
     return px
 
@@ -148,8 +149,7 @@ def merge(grps):
     gps = grps.copy()
     print('Merging groups...')
     # Start rgb and hex color lists
-    rgb = []
-    hx = []
+    col = []
     lw = []
     for grp in gps:
         lw.append(len(grp))
@@ -165,23 +165,34 @@ def merge(grps):
     for grp in gps:
         # Add the average color for the group to the rgb and hex lists
         c = getavg(grp)
-        rgb.append(c)
-        hx.append(tohex(c))
+        col.append(c)
     # Return the lists of color values
-    return rgb, hx, lw
+    return col, lw
+
+
+# Sort the color pallete by hue, saturation, or value
+def sortcols(rgb, lw):
+    # Combine the lengths and colors so they get sorted together
+    cols = [np.append(rgb[x], lw[x]) for x in range(len(lw))]
+    # Sort by converting to hsv
+    sort = sorted(cols, key=lambda x: colorsys.rgb_to_hsv(x[0], x[1], x[2])[0])
+    # Separate and return the colors and lengths
+    cols = [x[0:3] for x in sort]
+    lws = [x[3] for x in sort]
+    return cols, lws
 
 
 # Output the generated list of colors
-def output(rgb, hx, lw):
+def output(rgb, lw):
     # Open palette.txt to write
-    with open('palette.txt', 'w') as out:
+    with open('Palette.txt', 'w') as out:
         # Create a list of lines starting with info about the base image
         lines = ['From ' + file + ':\n', '\n']
         # Add the hex color values to the list of lines and write the lines
-        lines.extend([c + '\n' for c in hx])
+        lines.extend([tohex(c) + '\n' for c in rgb])
         out.writelines(lines)
     # Create a new image to display the color palette
-    out = Image.new('RGB', (100 * len(rgbs), 1150), 'black')
+    out = Image.new('RGB', (100 * len(rgb), 1150), 'black')
     # Get the most common color
     most = max(lw)
     # For each color, iterate over a 50x100 block
@@ -194,17 +205,24 @@ def output(rgb, hx, lw):
             for y in range(100):
                 # Fill in the current color
                 out.putpixel((x + (100 * c), 1149 - y), (rgb[c][0], rgb[c][1], rgb[c][2]))
+    out.save('PaletteLarge.png')
+    out = Image.new('RGB', (50 * len(rgb), 100), 'black')
+    for c in range(len(rgb)):
+        for x in range(100):
+            for y in range(50):
+                # Fill in the current color
+                out.putpixel((x + (100 * c), y), (rgb[c][0], rgb[c][1], rgb[c][2]))
     out.save('Palette.png')
 
 
-binning = 4
-threshold = 64
+binning = 9
+threshold = 48
 prev = False
 
 # Choose an image and image directory
 path = '/usr/share/backgrounds/'
 # path = '/home/oscar/Pictures/Gimp/Exports/'
-file = 'The Empty Valley.png'
+file = 'SeaSunset.jpg'
 # file = 'Test Image.png'
 
 if prev:
@@ -221,13 +239,9 @@ count = image.width * image.height
 print(str(count) + ' pixels.')
 
 pixmap = binimage(image, binln)
-
 count = pixmap.shape[0] * pixmap.shape[1]
-
 pixels = preparr(pixmap)
-
 groups = groupx(pixels, threshold)
-
-rgbs, hexs, lens = merge(groups)
-
-output(rgbs, hexs, lens)
+rgbs, lens = merge(groups)
+rgbs, lens = sortcols(rgbs, lens)
+output(rgbs, lens)
