@@ -4,10 +4,18 @@ import numpy as np
 from PIL import Image
 
 
+class GetColors:
+    def __init__(self):
+        pass
+
+
 # Get variance of a set of pixels
 def getvar(data):
     mean = getavg(data)
-    difs = [colordif(x, mean) ** 2 for x in data]
+    if len(np.shape(np.array(data))) == 2:
+        difs = [colordif(x, mean) ** 2 for x in data]
+    else:
+        difs = [abs(x - mean) ** 2 for x in data]
     variance = math.sqrt(sum(difs) / len(difs))
     return int(variance)
 
@@ -109,8 +117,11 @@ def preparr(arr):
     px = np.reshape(arr, (count, 3))
     # Removes all colors darker than [16, 16, 16]
     px = px[np.logical_not(np.logical_and(px[:, 0] < 17, px[:, 1] < 17, px[:, 2] < 17))]
+    print('Sorting array...')
+    # Sort array
+    sort = sorted(px, key=lambda x: colorsys.rgb_to_hsv(x[0], x[1], x[2])[1])
     # Return the new array
-    return px
+    return sort
 
 
 # Separate pixel list into color groups
@@ -208,21 +219,21 @@ def output(rgb, lw):
     out.save('PaletteLarge.png')
     out = Image.new('RGB', (50 * len(rgb), 100), 'black')
     for c in range(len(rgb)):
-        for x in range(100):
-            for y in range(50):
+        for x in range(50):
+            for y in range(100):
                 # Fill in the current color
-                out.putpixel((x + (100 * c), y), (rgb[c][0], rgb[c][1], rgb[c][2]))
+                out.putpixel((x + (50 * c), y), (rgb[c][0], rgb[c][1], rgb[c][2]))
     out.save('Palette.png')
 
 
-binning = 9
+binning = 4
 threshold = 48
 prev = False
 
 # Choose an image and image directory
 path = '/usr/share/backgrounds/'
 # path = '/home/oscar/Pictures/Gimp/Exports/'
-file = 'SeaSunset.jpg'
+file = 'Resistance Fighters.jpg'
 # file = 'Test Image.png'
 
 if prev:
