@@ -1,5 +1,4 @@
 import os
-import sys
 import csv
 import math
 import colorsys
@@ -9,6 +8,7 @@ from multiprocessing import Process, cpu_count
 
 
 class GetColors:
+    # Initiates the class to get a color palette
     def __init__(self, img, pxbin, thresh):
         print('Opening image...')
         self.binning = pxbin
@@ -19,6 +19,7 @@ class GetColors:
         self.cores = cpu_count()
         print(str(self.count) + ' pixels.')
 
+    # Runs all functions required to get the color pallete
     def run(self):
         threads = []
         chunk = int(math.floor(self.image.height / self.cores))
@@ -42,7 +43,15 @@ class GetColors:
                     height += 1
                     pixmap = np.append(pixmap, np.array(row))
             os.remove('img' + str(r) + '.csv')
-        pixmap = pixmap.reshape((height, width, 3))
+        pixmap = pixmap.reshape((height, width, 3)).astype(np.int64)
+
+        print('Building binned image...')
+        binned = Image.new('RGB', (width, height))
+        for y in range(height):
+            for x in range(width):
+                px = pixmap[y][x]
+                binned.putpixel((x, y), (px[0], px[1], px[2]))
+        binned.save('Binned.png')
 
         self.count = pixmap.shape[0] * pixmap.shape[1]
 
@@ -140,13 +149,12 @@ class GetColors:
 
     # Move image pixels to an array, and scale down using the average for chunks of pixels
     def binimage(self, img, rad, pid):
+        print('Started binning thread ' + str(pid + 1))
         # Get the new width and height based on the chunk size
         w = math.floor(img.width / (rad + 1))
         h = math.floor(img.height / (rad + 1))
-        print('Initiating array...')
         # Create an array for the pixels
         pxmp = np.array([[[0, 0, 0]] * w] * h)
-        print('Populating array...')
         # Iterate through x and y, for the predetermined width and height
         for y in range(h):
             for x in range(w):
@@ -154,7 +162,8 @@ class GetColors:
                 px = self.binpixels(img, (y * (rad + 1), x * (rad + 1)), rad)
                 # Add it to the list of pixels and the new image
                 pxmp[y][x] = px
-            print(y + (h * pid))
+            print(h - y)
+        print('Completed thread ' + str(pid + 1))
         with open('img' + str(pid) + '.csv', 'w') as out:
             writer = csv.writer(out)
             shp = np.shape(pxmp)
@@ -266,10 +275,10 @@ threshold = 64
 prev = False
 
 # Choose an image and image directory
-# path = '/usr/share/backgrounds/'
-path = '/home/oscar/Pictures/Gimp/Exports/'
-# file = 'The Empty Valley.png'
-file = 'Test Image.png'
+path = '/usr/share/backgrounds/'
+# path = '/home/oscar/Pictures/Gimp/Exports/'
+file = 'The Empty Valley.png'
+# file = 'Test Image.png'
 
 if prev:
     imgcolor = GetColors('Binned.png', 0, threshold)
