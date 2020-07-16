@@ -1,5 +1,4 @@
 import os
-import sys
 import csv
 import math
 import colorsys
@@ -153,8 +152,10 @@ class GetColors:
         variance = self.getvar(pxls)
         if variance > 32:
             px = np.array([0, 0, 0])
-        else:
+        elif variance > 8:
             px = self.getavg(pxls)
+        else:
+            px = pxls[0]
         # Return the average color of the list of pixels
         return px
 
@@ -173,7 +174,7 @@ class GetColors:
                 px = self.binpixels(img, (y * (rad + 1), x * (rad + 1)), rad)
                 # Add it to the list of pixels and the new image
                 pxmp[y][x] = px
-            print(h - y)
+            print(str(pid + 1) + ': ' + str(int((100 / h) * y)) + '%')
         print('Completed thread ' + str(pid + 1))
         with open('img' + str(pid) + '.csv', 'w') as out:
             writer = csv.writer(out)
@@ -197,30 +198,25 @@ class GetColors:
     def groupx(self, pxls, thresh):
         # Copy the list of pixels so it can be modified
         pix = np.copy(pxls)
+        full = len(pix)
         print('Starting grouping process...')
         # Create the list of groups
         grps = []
         # Repeat while there are still pixels in the list
         while len(pix > 0):
-            print(len(pix))
+            # Print the percent remaining
+            print(str(100 - int((100 / full) * len(pix))) + '%')
             # Get the first pixel in the list of pixels
             px = pix[0]
-            # Create new group in list of groups
-            grps.append([])
-            x = 0
-            # Repeat for every pixel in the list of pixels
-            while len(pix) > x:
-                # Get the color value for the pixel
-                p = pix[x]
-                # Compare it to the first pixel in this group
-                dif = self.colordif(px, p)
-                # If the difference is within the threshold, add it to the group
-                if dif < thresh:
-                    grps[-1].append(p.tolist())
-                    pix = np.delete(pix, x, axis=0)
-                else:
-                    x += 1
-        # Return the list of groups
+            # Get the differences between the first pixel and the remaining pixels
+            difs = np.apply_along_axis(self.colordif, 1, pix, px)
+            # Get the indexes of pixels that are within the threshold
+            ind = np.where(difs < thresh)
+            # Get the list of pixels within the threshold
+            grp = pix[ind].tolist()
+            grps.append(grp)
+            # Remove the pixels that were added to the group from the remaining pixels
+            pix = np.delete(pix, ind, axis=0)
         return grps
 
     # Get the average color for each group
@@ -281,12 +277,15 @@ class GetColors:
         out.save('Palette.png')
 
 
+# Configure basic settings
+
 binning = 4
-threshold = 48
-sizelimit = 2560
+threshold = 64
+sizelimit = 1920
 prev = False
 
 # Choose an image and image directory
+
 path = '/usr/share/backgrounds/'
 # path = '/home/oscar/Pictures/Gimp/Exports/'
 file = 'The Empty Valley.png'
