@@ -1,13 +1,11 @@
+import os
+import sys
+import csv
 import math
 import colorsys
 import numpy as np
 from PIL import Image
 from multiprocessing import Process, cpu_count
-
-
-class MultiProcess:
-    def __init__(self):
-        self.cores = cpu_count()
 
 
 class GetColors:
@@ -18,11 +16,36 @@ class GetColors:
         # Open the image and get info about the image
         self.image = Image.open(img)
         self.count = self.image.width * self.image.height
+        self.cores = cpu_count()
         print(str(self.count) + ' pixels.')
 
     def run(self):
-        pixmap = self.binimage(self.image, self.binning)
+        threads = []
+        chunk = int(math.floor(self.image.height / self.cores))
+        chunks = [self.image.crop((0, t * chunk, self.image.width, (t + 1) * chunk)) for t in range(self.cores)]
+
+        for t in range(self.cores):
+            p = Process(target=self.binimage, args=(chunks[t], self.binning, t, ))
+            threads.append(p)
+            p.start()
+        for t in threads:
+            t.join()
+
+        pixmap = np.array([])
+        width = 0
+        height = 0
+        for r in range(self.cores):
+            with open('img' + str(r) + '.csv') as raw:
+                reader = csv.reader(raw)
+                for row in reader:
+                    width = int(len(row) / 3)
+                    height += 1
+                    pixmap = np.append(pixmap, np.array(row))
+            os.remove('img' + str(r) + '.csv')
+        pixmap = pixmap.reshape((height, width, 3))
+
         self.count = pixmap.shape[0] * pixmap.shape[1]
+
         pixels = self.preparr(pixmap)
         groups = self.groupx(pixels, threshold)
         rgbs, lens = self.merge(groups)
@@ -116,12 +139,10 @@ class GetColors:
         return px
 
     # Move image pixels to an array, and scale down using the average for chunks of pixels
-    def binimage(self, img, rad):
+    def binimage(self, img, rad, pid):
         # Get the new width and height based on the chunk size
         w = math.floor(img.width / (rad + 1))
         h = math.floor(img.height / (rad + 1))
-        # Create a new image to show the result of this function
-        binned = Image.new('RGB', (w, h), 'white')
         print('Initiating array...')
         # Create an array for the pixels
         pxmp = np.array([[[0, 0, 0]] * w] * h)
@@ -133,11 +154,11 @@ class GetColors:
                 px = self.binpixels(img, (y * (rad + 1), x * (rad + 1)), rad)
                 # Add it to the list of pixels and the new image
                 pxmp[y][x] = px
-                binned.putpixel((x, y), (px[0], px[1], px[2]))
-            print(h - y)
-        # Save the downsixed image for viewing and return the list of pixels
-        binned.save('Binned.png')
-        return pxmp
+            print(y + (h * pid))
+        with open('img' + str(pid) + '.csv', 'w') as out:
+            writer = csv.writer(out)
+            shp = np.shape(pxmp)
+            writer.writerows(pxmp.reshape(shp[0], shp[1] * 3))
 
     # Prepare pixel list for the grouping algorithm
     def preparr(self, arr):
@@ -240,15 +261,15 @@ class GetColors:
         out.save('Palette.png')
 
 
-binning = 9
-threshold = 48
+binning = 4
+threshold = 64
 prev = False
 
 # Choose an image and image directory
-path = '/usr/share/backgrounds/'
-# path = '/home/oscar/Pictures/Gimp/Exports/'
-file = 'The Empty Valley.png'
-# file = 'Test Image.png'
+# path = '/usr/share/backgrounds/'
+path = '/home/oscar/Pictures/Gimp/Exports/'
+# file = 'The Empty Valley.png'
+file = 'Test Image.png'
 
 if prev:
     imgcolor = GetColors('Binned.png', 0, threshold)
