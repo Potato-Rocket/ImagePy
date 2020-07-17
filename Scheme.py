@@ -62,10 +62,10 @@ class GetColors:
 
         self.count = pixmap.shape[0] * pixmap.shape[1]
 
-        pixels = self.preparr(pixmap)
+        pixels = self.preparr(pixmap, 16)
         groups = self.groupx(pixels, threshold)
         rgbs, lens = self.merge(groups)
-        rgbs, lens = self.sortcols(rgbs, lens)
+        rgbs, lens = self.sortcols(rgbs, lens, 8)
         self.output(rgbs, lens)
 
     # Returns the average color of a set of colors, using NumPy
@@ -90,14 +90,23 @@ class GetColors:
         return int(dis)
 
     # Sort the color pallete by hue, saturation, or value
-    @staticmethod
-    def sortcols(rgb, lw):
+    def sortcols(self, rgb, lw, num):
+        nm = num
+        # Get each color's uniqueness
+        difs = []
+        for col in rgb:
+            difs.append(np.int_(np.average(np.apply_along_axis(self.colordif, 1, rgb, col))))
+        difs = np.array(difs)
+        difs = np.reshape(difs, (len(difs), 1))
         # Combine the lengths and colors so they get sorted together
         lws = np.array(lw)
-        lws = np.reshape(lws, (np.shape(lws)[0], 1))
-        cols = np.append(rgb, lws, axis=1)
+        lws = np.reshape(lws, (len(lws), 1))
+        cols = np.append(rgb, np.append(lws, difs, axis=1), axis=1)
+        sort = sorted(cols, key=lambda x: x[4])
+        if nm > len(sort):
+            nm = len(sort)
         # Sort by converting to hsv
-        sort = sorted(cols, key=lambda x: colorsys.rgb_to_hsv(x[0], x[1], x[2])[0])
+        sort = sorted(sort[-nm:], key=lambda x: colorsys.rgb_to_hsv(x[0], x[1], x[2])[0])
         # Separate and return the colors and lengths
         cols = [x[0:3] for x in sort]
         lws = [x[3] for x in sort]
@@ -182,17 +191,14 @@ class GetColors:
             writer.writerows(pxmp.reshape(shp[0], shp[1] * 3))
 
     # Prepare pixel list for the grouping algorithm
-    def preparr(self, arr):
+    def preparr(self, arr, dark):
         print('Flattening array...')
         # Reshape the 2D pixel array to a 1D pixel array
         px = np.reshape(arr, (self.count, 3))
         # Removes all colors darker than [16, 16, 16]
-        px = px[np.logical_not(np.logical_and(px[:, 0] < 17, px[:, 1] < 17, px[:, 2] < 17))]
-        print('Sorting array...')
-        # Sort array
-        sort = sorted(px, key=lambda x: colorsys.rgb_to_hsv(x[0], x[1], x[2])[1])
+        px = px[np.logical_not(np.logical_and(px[:, 0] <= dark, px[:, 1] <= dark, px[:, 2] <= dark))]
         # Return the new array
-        return sort
+        return px
 
     # Separate pixel list into color groups
     def groupx(self, pxls, thresh):
@@ -223,12 +229,14 @@ class GetColors:
     def merge(self, grps):
         gps = grps.copy()
         print('Merging groups...')
-        # Start rgb and hex color lists
+        # Startcolor lists
         col = []
         lw = []
+        # Get list lengths
         for grp in gps:
             lw.append(len(grp))
         thresh = int(max(lw) / 1000)
+        # Remove excessively rare color groups
         x = 0
         while x < len(lw):
             if lw[x] < thresh:
@@ -280,7 +288,7 @@ class GetColors:
 # Configure basic settings
 
 binning = 4
-threshold = 64
+threshold = 32
 sizelimit = 1920
 prev = False
 
@@ -288,7 +296,7 @@ prev = False
 
 path = '/usr/share/backgrounds/'
 # path = '/home/oscar/Pictures/Gimp/Exports/'
-file = 'The Empty Valley.png'
+file = 'Minimalist Space.jpg'
 # file = 'Test Image.png'
 
 if prev:
