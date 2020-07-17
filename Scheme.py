@@ -1,6 +1,8 @@
 import os
+import sys
 import csv
 import math
+import timeit
 import colorsys
 import numpy as np
 import pandas as pd
@@ -14,8 +16,13 @@ class GetColors:
         print('Opening image...')
         self.binning = pxbin
         self.threshold = thresh
+        self.file = img
         # Open the image and get info about the image
-        self.image = Image.open(img)
+        try:
+            self.image = Image.open(self.file)
+        except FileNotFoundError:
+            print('\nFileNotFoundError: No such file or directory: \'' + self.file + '\'')
+            sys.exit(2)
         width, height = self.image.size
         if width > size:
             print('Downsizing image...')
@@ -23,6 +30,7 @@ class GetColors:
             self.image = self.image.resize((size, int(height * ratio)))
         self.image.save('Downsized.png')
         self.count = self.image.width * self.image.height
+        print(str(self.count) + ' pixels.')
         self.cores = cpu_count()
 
     # Runs all functions required to get the color pallete
@@ -191,6 +199,7 @@ class GetColors:
                                                   'B': 'first',
                                                   'Count': 'sum'}).reset_index(drop=True)
         px = np.array(data)
+        print(str(len(px)) + ' unique colors to group.')
         # Return the new array
         return px
 
@@ -242,7 +251,7 @@ class GetColors:
         # Open palette.txt to write
         with open('Palette.txt', 'w') as out:
             # Create a list of lines starting with info about the base image
-            lines = ['From ' + file + ':\n', '\n']
+            lines = ['From ' + self.file + ':\n', '\n']
             # Add the hex color values to the list of lines and write the lines
             lines.extend([self.tohex(c) + '\n' for c in rgb])
             out.writelines(lines)
@@ -265,14 +274,12 @@ prev = False
 
 # Choose an image and image directory
 
-# path = '/usr/share/backgrounds/'
-path = '/home/oscar/Pictures/Gimp/Exports/'
-# file = 'Empty Valley.png'
-file = 'Test Image.png'
+path = '/usr/share/backgrounds/Dark Planet.jpg'
+# path = '/home/oscar/Pictures/Gimp/Exports/Test Image.png'
 
 if prev:
     imgcolor = GetColors('Binned.png', 0, threshold, sizelimit)
 else:
-    imgcolor = GetColors(path + file, binning, threshold, sizelimit)
+    imgcolor = GetColors(path, binning, threshold, sizelimit)
 
 imgcolor.run()
