@@ -64,9 +64,9 @@ class GetColors:
 
         pixels = self.preparr(pixmap, 16)
         groups = self.groupx(pixels, threshold)
-        rgbs, lens = self.merge(groups)
-        rgbs, lens = self.sortcols(rgbs, lens)
-        self.output(rgbs, lens)
+        rgbs = self.merge(groups)
+        rgbs = self.sortcols(rgbs)
+        self.output(rgbs)
 
     # Returns the average color of a set of colors, using NumPy
     @staticmethod
@@ -108,17 +108,11 @@ class GetColors:
 
     # Sort the color pallete by hue, saturation, or value
     @staticmethod
-    def sortcols(rgb, lw):
-        # Combine the lengths and colors so they get sorted together
-        lws = np.array(lw)
-        lws = np.reshape(lws, (len(lws), 1))
-        cols = np.append(rgb, lws, axis=1)
+    def sortcols(rgb):
         # Sort by converting to hsv
-        sort = sorted(cols, key=lambda x: colorsys.rgb_to_hsv(x[0], x[1], x[2])[0])
+        sort = sorted(rgb, key=lambda x: colorsys.rgb_to_hsv(x[0], x[1], x[2])[0])
         # Separate and return the colors and lengths
-        cols = [x[0:3] for x in sort]
-        lws = [x[3] for x in sort]
-        return cols, lws
+        return sort
 
     # Get variance of a set of pixels
     def getvar(self, data):
@@ -212,8 +206,8 @@ class GetColors:
         while len(pix > 0):
             # Print the percent remaining
             print(str(100 - int((100 / full) * len(pix))) + '%')
-            # Get the first pixel in the list of pixels
-            px = pix[0]
+            # Get the most common pixel in the list of pixels
+            px = pix[np.where(pix == np.max(pix[:, 3]))[0][0]]
             # Get the differences between the first pixel and the remaining pixels
             difs = np.apply_along_axis(self.colordif, 1, pix, px)
             # Get the indexes of pixels that are within the threshold
@@ -229,31 +223,22 @@ class GetColors:
     def merge(self, grps):
         gps = grps.copy()
         print('Merging groups...')
-        # Startcolor lists
+        # Start color lists
         col = []
-        lw = []
-        # Get list lengths
-        for grp in gps:
-            lw.append(len(grp))
-        thresh = int(max(lw) / 1000)
-        # Remove excessively rare color groups
-        x = 0
-        while x < len(lw):
-            if lw[x] < thresh:
-                lw.pop(x)
-                gps.pop(x)
-            else:
-                x += 1
         # For each group
         for grp in gps:
+            full = []
+            for px in grp:
+                for _ in range(px[3]):
+                    full.append(px[:3])
             # Add the average color for the group to the rgb and hex lists
             c = self.getavg(grp)
             col.append(c)
         # Return the lists of color values
-        return col, lw
+        return col
 
     # Output the generated list of colors
-    def output(self, rgb, lw):
+    def output(self, rgb):
         # Open palette.txt to write
         with open('Palette.txt', 'w') as out:
             # Create a list of lines starting with info about the base image
@@ -262,20 +247,6 @@ class GetColors:
             lines.extend([self.tohex(c) + '\n' for c in rgb])
             out.writelines(lines)
         # Create a new image to display the color palette
-        out = Image.new('RGB', (100 * len(rgb), 1150), 'black')
-        # Get the most common color
-        most = max(lw)
-        # For each color, iterate over a 50x100 block
-        for c in range(len(rgb)):
-            for x in range(100):
-                for y in range(int(1000 * lw[c] / most)):
-                    # Fill in the current color based on its occurence
-                    out.putpixel((x + (100 * c), 999 - y), (rgb[c][0], rgb[c][1], rgb[c][2]))
-            for x in range(100):
-                for y in range(100):
-                    # Fill in the current color
-                    out.putpixel((x + (100 * c), 1149 - y), (rgb[c][0], rgb[c][1], rgb[c][2]))
-        out.save('PaletteLarge.png')
         out = Image.new('RGB', (50 * len(rgb), 100), 'black')
         for c in range(len(rgb)):
             for x in range(50):
