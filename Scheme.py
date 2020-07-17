@@ -28,7 +28,6 @@ class GetColors:
             print('Downsizing image...')
             ratio = size / width
             self.image = self.image.resize((size, int(height * ratio)))
-        self.image.save('Downsized.png')
         self.count = self.image.width * self.image.height
         print(str(self.count) + ' pixels.')
         self.cores = cpu_count()
@@ -71,10 +70,18 @@ class GetColors:
         self.count = pixmap.shape[0] * pixmap.shape[1]
 
         pixels = self.preparr(pixmap, 16)
-        groups = self.groupx(pixels, threshold)
-        rgbs = self.merge(groups)
-        rgbs = self.sortcols(rgbs)
-        self.output(rgbs)
+        while True:
+            print('Threshold: ' + str(self.threshold))
+            colors = self.groupx(pixels, self.threshold)
+            length = len(colors)
+            if length == 8:
+                break
+            elif length < 8:
+                self.threshold -= 4
+            else:
+                self.threshold += 4
+        colors = self.sortcols(colors)
+        self.output(colors)
 
     # Returns the average color of a set of colors, using NumPy
     @staticmethod
@@ -226,7 +233,8 @@ class GetColors:
             grps.append(grp)
             # Remove the pixels that were added to the group from the remaining pixels
             pix = np.delete(pix, ind, axis=0)
-        return grps
+        colors = self.merge(grps)
+        return colors
 
     # Get the average color for each group
     def merge(self, grps):
@@ -274,7 +282,7 @@ prev = False
 
 # Choose an image and image directory
 
-path = '/usr/share/backgrounds/Dark Planet.jpg'
+path = '/usr/share/backgrounds/Sand Dune.png'
 # path = '/home/oscar/Pictures/Gimp/Exports/Test Image.png'
 
 if prev:
