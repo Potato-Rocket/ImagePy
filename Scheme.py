@@ -74,14 +74,21 @@ class GetColors:
             print('Threshold: ' + str(self.threshold))
             colors = self.groupx(pixels, self.threshold)
             length = len(colors)
+            step = abs(length - 8)
             if length == 8:
                 break
             elif length < 8:
-                self.threshold -= 4
+                self.threshold -= step
             else:
-                self.threshold += 4
+                self.threshold += step
         colors = self.sortcols(colors)
         self.output(colors)
+
+    # Get HSV value from RGB concisely
+    @staticmethod
+    def gethsv(rgb):
+        hsv = colorsys.rgb_to_hsv(rgb[0], rgb[1], rgb[2])
+        return hsv
 
     # Returns the average color of a set of colors, using NumPy
     @staticmethod
@@ -122,10 +129,9 @@ class GetColors:
         return string.upper()
 
     # Sort the color pallete by hue, saturation, or value
-    @staticmethod
-    def sortcols(rgb):
+    def sortcols(self, rgb):
         # Sort by converting to hsv
-        sort = sorted(rgb, key=lambda x: colorsys.rgb_to_hsv(x[0], x[1], x[2])[0])
+        sort = sorted(rgb, key=lambda x: (self.gethsv(x)[0], self.gethsv(x)[2], self.gethsv(x)[1]))
         # Separate and return the colors and lengths
         return sort
 
@@ -161,10 +167,8 @@ class GetColors:
         variance = self.getvar(pxls)
         if variance > 32:
             px = np.array([0, 0, 0])
-        elif variance > 8:
-            px = self.getavg(pxls)
         else:
-            px = pxls[0]
+            px = self.getavg(pxls)
         # Return the average color of the list of pixels
         return px
 
@@ -246,7 +250,8 @@ class GetColors:
         for grp in gps:
             full = []
             for px in grp:
-                for _ in range(px[3]):
+                val = self.gethsv(px)[2]
+                for _ in range(val):
                     full.append(px[:3])
             # Add the average color for the group to the rgb and hex lists
             c = self.getavg(grp)
@@ -276,13 +281,13 @@ class GetColors:
 # Configure basic settings
 
 binning = 9
-threshold = 32
+threshold = 64
 sizelimit = 1920
 prev = False
 
 # Choose an image and image directory
 
-path = '/usr/share/backgrounds/Sand Dune.png'
+path = '/usr/share/backgrounds/Minimalist Space.jpg'
 # path = '/home/oscar/Pictures/Gimp/Exports/Test Image.png'
 
 if prev:
