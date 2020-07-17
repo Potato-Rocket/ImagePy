@@ -65,7 +65,7 @@ class GetColors:
         pixels = self.preparr(pixmap, 16)
         groups = self.groupx(pixels, threshold)
         rgbs, lens = self.merge(groups)
-        rgbs, lens = self.sortcols(rgbs, lens, 8)
+        rgbs, lens = self.sortcols(rgbs, lens)
         self.output(rgbs, lens)
 
     # Returns the average color of a set of colors, using NumPy
@@ -89,29 +89,6 @@ class GetColors:
         # Return the average difference
         return int(dis)
 
-    # Sort the color pallete by hue, saturation, or value
-    def sortcols(self, rgb, lw, num):
-        nm = num
-        # Get each color's uniqueness
-        difs = []
-        for col in rgb:
-            difs.append(np.int_(np.average(np.apply_along_axis(self.colordif, 1, rgb, col))))
-        difs = np.array(difs)
-        difs = np.reshape(difs, (len(difs), 1))
-        # Combine the lengths and colors so they get sorted together
-        lws = np.array(lw)
-        lws = np.reshape(lws, (len(lws), 1))
-        cols = np.append(rgb, np.append(lws, difs, axis=1), axis=1)
-        sort = sorted(cols, key=lambda x: x[4])
-        if nm > len(sort):
-            nm = len(sort)
-        # Sort by converting to hsv
-        sort = sorted(sort[-nm:], key=lambda x: colorsys.rgb_to_hsv(x[0], x[1], x[2])[0])
-        # Separate and return the colors and lengths
-        cols = [x[0:3] for x in sort]
-        lws = [x[3] for x in sort]
-        return cols, lws
-
     # Converts an RGB value to a hex string
     @staticmethod
     def tohex(col):
@@ -128,6 +105,20 @@ class GetColors:
             string += h
         # Returns the string in all caps
         return string.upper()
+
+    # Sort the color pallete by hue, saturation, or value
+    @staticmethod
+    def sortcols(rgb, lw):
+        # Combine the lengths and colors so they get sorted together
+        lws = np.array(lw)
+        lws = np.reshape(lws, (len(lws), 1))
+        cols = np.append(rgb, lws, axis=1)
+        # Sort by converting to hsv
+        sort = sorted(cols, key=lambda x: colorsys.rgb_to_hsv(x[0], x[1], x[2])[0])
+        # Separate and return the colors and lengths
+        cols = [x[0:3] for x in sort]
+        lws = [x[3] for x in sort]
+        return cols, lws
 
     # Get variance of a set of pixels
     def getvar(self, data):
@@ -296,7 +287,7 @@ prev = False
 
 path = '/usr/share/backgrounds/'
 # path = '/home/oscar/Pictures/Gimp/Exports/'
-file = 'Minimalist Space.jpg'
+file = 'Dark Planet.jpg'
 # file = 'Test Image.png'
 
 if prev:
