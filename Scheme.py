@@ -2,8 +2,8 @@ import os
 import csv
 import math
 import colorsys
-
 import numpy as np
+import pandas as pd
 from PIL import Image
 from multiprocessing import Process, cpu_count
 
@@ -186,8 +186,17 @@ class GetColors:
         print('Flattening array...')
         # Reshape the 2D pixel array to a 1D pixel array
         px = np.reshape(arr, (self.count, 3))
+
         # Removes all colors darker than [16, 16, 16]
         px = px[np.logical_not(np.logical_and(px[:, 0] <= dark, px[:, 1] <= dark, px[:, 2] <= dark))]
+
+        data = pd.DataFrame(np.append(px, np.ones((len(px), 1)), axis=1),
+                            columns=['R', 'G', 'B', 'Count'], dtype=np.long)
+        data = data.groupby(['R', 'G', 'B']).agg({'R': 'first',
+                                                  'G': 'first',
+                                                  'B': 'first',
+                                                  'Count': 'sum'}).reset_index(drop=True)
+        px = np.array(data)
         # Return the new array
         return px
 
@@ -278,17 +287,17 @@ class GetColors:
 
 # Configure basic settings
 
-binning = 4
+binning = 9
 threshold = 32
 sizelimit = 1920
 prev = False
 
 # Choose an image and image directory
 
-path = '/usr/share/backgrounds/'
-# path = '/home/oscar/Pictures/Gimp/Exports/'
-file = 'Dark Planet.jpg'
-# file = 'Test Image.png'
+# path = '/usr/share/backgrounds/'
+path = '/home/oscar/Pictures/Gimp/Exports/'
+# file = 'Empty Valley.png'
+file = 'Test Image.png'
 
 if prev:
     imgcolor = GetColors('Binned.png', 0, threshold, sizelimit)
