@@ -2,8 +2,8 @@ import os
 import sys
 import csv
 import math
-import timeit
 import colorsys
+import configparser as cp
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -41,7 +41,7 @@ class GetColors:
         chunks = [self.image.crop((0, t * chunk, self.image.width, (t + 1) * chunk)) for t in range(self.cores)]
 
         for t in range(self.cores):
-            p = Process(target=self.binimage, args=(chunks[t], self.binning, t, ))
+            p = Process(target=self.binimage, args=(chunks[t], self.binning, t,))
             threads.append(p)
             p.start()
         for t in threads:
@@ -280,17 +280,43 @@ class GetColors:
         out.save('Palette.png')
 
 
-# Configure basic settings
-palettesize = 8
-valuelimit = 16
-binning = 9
-threshold = 64
-sizelimit = 1920
-prev = False
+class Config:
+    # Initiates the class to get the data from a config file
+    def __init__(self, directory):
+        self.config = cp.ConfigParser()
+        self.file = directory
+
+    def read(self):
+        self.config.read(self.file)
+        dflt = {'palette-size': int(self.getkey('Defaults', 'palette-size', 8)),
+                'color-value-limit': int(self.getkey('Defaults', 'color-value-limit', 16))}
+
+        pth = {'images': self.getkey('Paths', 'images', '/usr/share/backgrounds/')}
+
+        alg = {'start-threshold': int(self.getkey('Algorithm', 'start-threshold', 64)),
+               'binning-size': int(self.getkey('Algorithm', 'binning-size', 9)),
+               'binning-variance-limit': int(self.getkey('Algorithm', 'binning-variance-limit', 32)),
+               'image-resize-limit': int(self.getkey('Algorithm', 'image-resize-limit', 1920))}
+
+        return dflt, pth, alg
+
+    def getkey(self, section, key, default):
+        try:
+            value = self.config[section][key]
+        except KeyError:
+            value = default
+        return value
+
 
 # Choose an image
-path = '/usr/share/backgrounds/Quasar.png'
+image = 'Quasar.png'
 
-imgcolor = GetColors(path, binning, threshold, sizelimit, palettesize, valuelimit)
-
+config = Config('config.ini')
+defaults, paths, algorithm = config.read()
+imgcolor = GetColors(paths['images'] + image,
+                     algorithm['binning-size'],
+                     algorithm['start-threshold'],
+                     algorithm['image-resize-limit'],
+                     defaults['palette-size'],
+                     defaults['color-value-limit'])
 imgcolor.run()
