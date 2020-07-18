@@ -12,11 +12,13 @@ from multiprocessing import Process, cpu_count
 
 class GetColors:
     # Initiates the class to get a color palette
-    def __init__(self, img, pxbin, thresh, size):
+    def __init__(self, img, pxbin, thresh, imgsize, size, value):
         print('Opening image...')
         self.binning = pxbin
         self.threshold = thresh
         self.file = img
+        self.value = value
+        self.palettesize = size
         # Open the image and get info about the image
         try:
             self.image = Image.open(self.file)
@@ -24,10 +26,10 @@ class GetColors:
             print('\nFileNotFoundError: No such file or directory: \'' + self.file + '\'')
             sys.exit(2)
         width, height = self.image.size
-        if width > size:
+        if width > imgsize:
             print('Downsizing image...')
-            ratio = size / width
-            self.image = self.image.resize((size, int(height * ratio)))
+            ratio = imgsize / width
+            self.image = self.image.resize((imgsize, int(height * ratio)))
         self.count = self.image.width * self.image.height
         print(str(self.count) + ' pixels.')
         self.cores = cpu_count()
@@ -69,15 +71,15 @@ class GetColors:
 
         self.count = pixmap.shape[0] * pixmap.shape[1]
 
-        pixels = self.preparr(pixmap, 16)
+        pixels = self.preparr(pixmap, self.value)
         while True:
             print('Threshold: ' + str(self.threshold))
             colors = self.groupx(pixels, self.threshold)
             length = len(colors)
-            step = abs(length - 8)
-            if length == 8:
+            step = abs(length - self.palettesize)
+            if length == self.palettesize:
                 break
-            elif length < 8:
+            elif length < self.palettesize:
                 self.threshold -= step
             else:
                 self.threshold += step
@@ -279,20 +281,16 @@ class GetColors:
 
 
 # Configure basic settings
-
+palettesize = 8
+valuelimit = 16
 binning = 9
 threshold = 64
 sizelimit = 1920
 prev = False
 
-# Choose an image and image directory
+# Choose an image
+path = '/usr/share/backgrounds/Quasar.png'
 
-path = '/usr/share/backgrounds/Minimalist Space.jpg'
-# path = '/home/oscar/Pictures/Gimp/Exports/Test Image.png'
-
-if prev:
-    imgcolor = GetColors('Binned.png', 0, threshold, sizelimit)
-else:
-    imgcolor = GetColors(path, binning, threshold, sizelimit)
+imgcolor = GetColors(path, binning, threshold, sizelimit, palettesize, valuelimit)
 
 imgcolor.run()
