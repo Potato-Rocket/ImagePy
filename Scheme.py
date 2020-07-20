@@ -1,20 +1,21 @@
 #! /usr/bin/python3
 
-try:
-    import os
-    import sys
-    import csv
-    import math
-    import getopt
-    import colorsys
-    import configparser as cp
-    import numpy as np
-    import pandas as pd
-    from PIL import Image
-    from multiprocessing import Process, cpu_count
-except KeyError:
-    print('Error: Module not found. Make sure you have satisfied all dependencies.')
-    sys.exit(2)
+import os
+import sys
+import csv
+import math
+import getopt
+import colorsys
+import configparser as cp
+import numpy as np
+import pandas as pd
+from PIL import Image
+from multiprocessing import Process, cpu_count
+
+
+def verbose(string):
+    if ver:
+        print(string)
 
 
 class GetColors:
@@ -34,11 +35,11 @@ class GetColors:
             sys.exit(2)
         width, height = self.image.size
         if width > imgsize:
-            print('Downsizing image...')
+            verbose('Downsizing image...')
             ratio = imgsize / width
             self.image = self.image.resize((imgsize, int(height * ratio)))
         self.count = self.image.width * self.image.height
-        print(str(self.count) + ' pixels.')
+        verbose(str(self.count) + ' pixels.')
         self.cores = cpu_count()
 
     # Runs all functions required to get the color pallete
@@ -68,7 +69,7 @@ class GetColors:
             os.remove('img' + str(r) + '.csv')
         pixmap = pixmap.reshape((height, width, 3)).astype(np.int64)
 
-        print('Building binned image...')
+        verbose('Building binned image...')
         binned = Image.new('RGB', (width, height))
         for y in range(height):
             for x in range(width):
@@ -79,8 +80,9 @@ class GetColors:
         self.count = pixmap.shape[0] * pixmap.shape[1]
 
         pixels = self.preparr(pixmap, self.value)
+        print('Starting grouping process...')
         while True:
-            print('Threshold: ' + str(self.threshold))
+            verbose('Threshold: ' + str(self.threshold))
             colors = self.groupx(pixels, self.threshold)
             length = len(colors)
             step = abs(length - self.palettesize)
@@ -90,6 +92,7 @@ class GetColors:
                 self.threshold -= step
             else:
                 self.threshold += step
+        print('Merging groups...')
         colors = self.sortcols(colors)
         self.output(colors)
 
@@ -183,7 +186,7 @@ class GetColors:
 
     # Move image pixels to an array, and scale down using the average for chunks of pixels
     def binimage(self, img, rad, pid):
-        print('Started binning thread ' + str(pid + 1))
+        verbose('Started binning thread ' + str(pid + 1))
         # Get the new width and height based on the chunk size
         w = math.floor(img.width / (rad + 1))
         h = math.floor(img.height / (rad + 1))
@@ -196,8 +199,8 @@ class GetColors:
                 px = self.binpixels(img, (y * (rad + 1), x * (rad + 1)), rad)
                 # Add it to the list of pixels and the new image
                 pxmp[y][x] = px
-            print(str(pid + 1) + ': ' + str(int((100 / h) * y)) + '%')
-        print('Completed thread ' + str(pid + 1))
+            verbose(str(pid + 1) + ': ' + str(int((100 / h) * y)) + '%')
+        verbose('Completed thread ' + str(pid + 1))
         with open('img' + str(pid) + '.csv', 'w') as out:
             writer = csv.writer(out)
             shp = np.shape(pxmp)
@@ -205,7 +208,7 @@ class GetColors:
 
     # Prepare pixel list for the grouping algorithm
     def preparr(self, arr, dark):
-        print('Flattening array...')
+        verbose('Flattening array...')
         # Reshape the 2D pixel array to a 1D pixel array
         px = np.reshape(arr, (self.count, 3))
 
@@ -219,7 +222,7 @@ class GetColors:
                                                   'B': 'first',
                                                   'Count': 'sum'}).reset_index(drop=True)
         px = np.array(data)
-        print(str(len(px)) + ' unique colors to group.')
+        verbose(str(len(px)) + ' unique colors to group.')
         # Return the new array
         return px
 
@@ -228,13 +231,12 @@ class GetColors:
         # Copy the list of pixels so it can be modified
         pix = np.copy(pxls)
         full = len(pix)
-        print('Starting grouping process...')
         # Create the list of groups
         grps = []
         # Repeat while there are still pixels in the list
         while len(pix > 0):
             # Print the percent remaining
-            print(str(100 - int((100 / full) * len(pix))) + '%')
+            verbose(str(100 - int((100 / full) * len(pix))) + '%')
             # Get the most common pixel in the list of pixels
             px = pix[np.where(pix == np.max(pix[:, 3]))[0][0]]
             # Get the differences between the first pixel and the remaining pixels
@@ -252,7 +254,6 @@ class GetColors:
     # Get the average color for each group
     def merge(self, grps):
         gps = grps.copy()
-        print('Merging groups...')
         # Start color lists
         col = []
         # For each group
