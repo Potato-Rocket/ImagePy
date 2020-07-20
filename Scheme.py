@@ -308,38 +308,58 @@ class Config:
         for arg, val in arguments:
             if arg in ('-i', '--image'):
                 pth['image'] = val
+            if arg in ('-v', '--verbose'):
+                dflt['verbose'] = True
 
         return dflt, pth, alg
 
     def getkeys(self):
         self.config.read(self.file)
-        dflt = {'palette-size': int(self.getkey('Defaults', 'palette-size', 8)),
-                'color-value-limit': int(self.getkey('Defaults', 'color-value-limit', 16))}
+        dflt = {'palette-size': self.getkey('Defaults', 'palette-size', 8, 'int'),
+                'color-value-limit': self.getkey('Defaults', 'color-value-limit', 16, 'int')}
 
-        pth = {'images': self.getkey('Paths', 'images', '/usr/share/backgrounds/')}
+        pth = {'images': self.getkey('Paths', 'images', '/usr/share/backgrounds/', 'string')}
 
-        alg = {'start-threshold': int(self.getkey('Algorithm', 'start-threshold', 64)),
-               'binning-size': int(self.getkey('Algorithm', 'binning-size', 9)),
-               'binning-variance-limit': int(self.getkey('Algorithm', 'binning-variance-limit', 32)),
-               'image-resize-limit': int(self.getkey('Algorithm', 'image-resize-limit', 1920))}
+        alg = {'start-threshold': self.getkey('Algorithm', 'start-threshold', 64, 'int'),
+               'binning-size': self.getkey('Algorithm', 'binning-size', 9, 'int'),
+               'binning-variance-limit': self.getkey('Algorithm', 'binning-variance-limit', 32, 'int'),
+               'image-resize-limit': self.getkey('Algorithm', 'image-resize-limit', 1920, 'int')}
 
         return dflt, pth, alg
 
-    def getkey(self, section, key, default):
-        try:
-            value = self.config[section][key]
-        except KeyError:
-            value = default
+    def getkey(self, section, key, default, outype):
+        if outype == 'bool':
+            try:
+                value = self.config[section].getboolean('key')
+            except ValueError:
+                value = default
+        else:
+            try:
+                value = self.config[section][key]
+            except KeyError:
+                value = default
+            if outype == 'int':
+                try:
+                    value = int(value)
+                except ValueError:
+                    value = default
         return value
 
 
 config = Config('config.ini')
 defaults, paths, algorithm = config.read()
+
+try:
+    ver = defaults['verbose']
+except KeyError:
+    ver = False
+
 try:
     print(paths['image'])
 except KeyError:
     print('Error: Image input required.')
     sys.exit(2)
+
 imgcolor = GetColors(paths['images'] + paths['image'],
                      algorithm['binning-size'],
                      algorithm['start-threshold'],
