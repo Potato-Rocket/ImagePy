@@ -299,17 +299,21 @@ class Config:
         dflt, pth, alg = self.getkeys()
 
         args = sys.argv[1:]
-        short = 'i:v'
-        long = ['image=', 'verbose']
+        short = 'i:fv'
+        long = ['image=', 'full', 'verbose']
         try:
             arguments, values = getopt.getopt(args, short, long)
         except getopt.error as error:
             print(str(error))
             sys.exit(2)
 
+        dflt['verbose'] = False
+
         for arg, val in arguments:
             if arg in ('-i', '--image'):
                 pth['image'] = val
+            if arg in ('-f', '--full'):
+                pth['images'] = ''
             if arg in ('-v', '--verbose'):
                 dflt['verbose'] = True
 
@@ -363,16 +367,12 @@ class Config:
 config = Config('config.ini')
 defaults, paths, algorithm = config.read()
 
-try:
-    ver = defaults['verbose']
-except KeyError:
-    ver = False
+ver = defaults['verbose']
 
 try:
     print(paths['image'])
 except KeyError:
-    print('Error: Image input required.')
-    sys.exit(2)
+    paths['image'] = input('Image directory: ')
 
 imgcolor = GetColors(paths['images'] + paths['image'],
                      algorithm['binning-size'],
