@@ -294,6 +294,7 @@ class Config:
         self.config = cp.ConfigParser()
         self.file = directory
 
+    # Reads the config files, and adds/overwrites values based on command line inputs
     def read(self):
         dflt, pth, alg = self.getkeys()
 
@@ -314,20 +315,32 @@ class Config:
 
         return dflt, pth, alg
 
+    # Reads the config file to get all necessary alues, and returns dictionaries
     def getkeys(self):
         self.config.read(self.file)
         dflt = {'palette-size': self.getkey('Defaults', 'palette-size', 8, 'int'),
                 'color-value-limit': self.getkey('Defaults', 'color-value-limit', 16, 'int')}
 
-        pth = {'images': self.getkey('Paths', 'images', '/usr/share/backgrounds/', 'string')}
+        pth = {'images': self.getkey('Paths', 'images', '', 'string')}
 
         alg = {'start-threshold': self.getkey('Algorithm', 'start-threshold', 64, 'int'),
                'binning-size': self.getkey('Algorithm', 'binning-size', 9, 'int'),
                'binning-variance-limit': self.getkey('Algorithm', 'binning-variance-limit', 32, 'int'),
                'image-resize-limit': self.getkey('Algorithm', 'image-resize-limit', 1920, 'int')}
-
         return dflt, pth, alg
 
+    # Reads values necessary to write the wallpaper
+    def getwalkeys(self):
+        wal = {'file': self.getkey('Wallpaper', 'file', '', 'string'),
+               'comment': self.getkey('Wallpaper', 'comment', '', 'string'),
+               'line': self.getkey('Wallpaper', 'line', '', 'string'),
+               'set': self.getkey('Wallpaper', 'set', False, 'bool'),
+               'set-immediately': self.getkey('Wallpaper', 'set-immediately', False, 'bool'),
+               'command': self.getkey('Wallpaper', 'command', '', 'string')}
+        return wal
+
+    # Gets a certain key with  a certain data type from the config file
+    # If it hits an error, it returns the default value
     def getkey(self, section, key, default, outype):
         if outype == 'bool':
             try:
@@ -368,3 +381,5 @@ imgcolor = GetColors(paths['images'] + paths['image'],
                      defaults['palette-size'],
                      defaults['color-value-limit'])
 imgcolor.run()
+
+wallpaper = config.getwalkeys()
