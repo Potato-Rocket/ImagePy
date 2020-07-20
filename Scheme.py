@@ -1,13 +1,20 @@
-import os
-import sys
-import csv
-import math
-import colorsys
-import configparser as cp
-import numpy as np
-import pandas as pd
-from PIL import Image
-from multiprocessing import Process, cpu_count
+#! /usr/bin/python3
+
+try:
+    import os
+    import sys
+    import csv
+    import math
+    import getopt
+    import colorsys
+    import configparser as cp
+    import numpy as np
+    import pandas as pd
+    from PIL import Image
+    from multiprocessing import Process, cpu_count
+except KeyError:
+    print('Error: Module not found. Make sure you have satisfied all dependencies.')
+    sys.exit(2)
 
 
 class GetColors:
@@ -287,6 +294,24 @@ class Config:
         self.file = directory
 
     def read(self):
+        dflt, pth, alg = self.getkeys()
+
+        args = sys.argv[1:]
+        short = 'i:v'
+        long = ['image=', 'verbose']
+        try:
+            arguments, values = getopt.getopt(args, short, long)
+        except getopt.error as error:
+            print(str(error))
+            sys.exit(2)
+
+        for arg, val in arguments:
+            if arg in ('-i', '--image'):
+                pth['image'] = val
+
+        return dflt, pth, alg
+
+    def getkeys(self):
         self.config.read(self.file)
         dflt = {'palette-size': int(self.getkey('Defaults', 'palette-size', 8)),
                 'color-value-limit': int(self.getkey('Defaults', 'color-value-limit', 16))}
@@ -308,12 +333,14 @@ class Config:
         return value
 
 
-# Choose an image
-image = 'Quasar.png'
-
 config = Config('config.ini')
 defaults, paths, algorithm = config.read()
-imgcolor = GetColors(paths['images'] + image,
+try:
+    print(paths['image'])
+except KeyError:
+    print('Error: Image input required.')
+    sys.exit(2)
+imgcolor = GetColors(paths['images'] + paths['image'],
                      algorithm['binning-size'],
                      algorithm['start-threshold'],
                      algorithm['image-resize-limit'],
