@@ -374,12 +374,28 @@ class Write:
     @staticmethod
     def wallpaper(var, img):
         if var['set']:
-            pass
+            print('Setting wallpaper...')
+            line = var['line']
+            line = line.replace('%', img) + '\n'
+            try:
+                with open(var['file'], 'r') as file:
+                    lines = file.readlines()
+            except FileNotFoundError:
+                print('Error: No such file or directory: ' + var['file'])
+            else:
+                try:
+                    index = lines.index(var['comment'].strip('\'').strip('\"') + '\n') + 1
+                except ValueError:
+                    print('Error: Specified comment not found in specified file.')
+                else:
+                    lines[index] = line
+                    with open(var['file'], 'w') as file:
+                        file.writelines(lines)
 
         if var['set-immediately']:
             print('Updating wallpaper...')
             string = var['command']
-            string = string.replace('%', img)
+            string = string.replace('%', '\'' + img + '\'')
             os.system(string)
 
 
