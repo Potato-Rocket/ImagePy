@@ -6,7 +6,6 @@ import csv
 import math
 import getopt
 import colorsys
-import subprocess
 import configparser
 import numpy as np
 import pandas as pd
@@ -45,6 +44,8 @@ class GetColors:
 
     # Runs all functions required to get the color pallete
     def run(self):
+        print('Starting binning process...')
+
         threads = []
         chunk = int(math.floor(self.image.height / self.cores))
         chunks = [self.image.crop((0, t * chunk, self.image.width, (t + 1) * chunk)) for t in range(self.cores)]
@@ -56,7 +57,7 @@ class GetColors:
         for t in threads:
             t.join()
 
-        print('Combining threads...')
+        verbose('Combining threads...')
         pixmap = np.array([])
         width = 0
         height = 0
@@ -349,7 +350,7 @@ class Config:
     def getkey(self, section, key, default, outype):
         if outype == 'bool':
             try:
-                value = self.config[section].getboolean('key')
+                value = self.config.getboolean(section, key)
             except ValueError:
                 value = default
         else:
@@ -374,10 +375,12 @@ class Write:
     def wallpaper(var, img):
         if var['set']:
             pass
+
         if var['set-immediately']:
+            print('Updating wallpaper...')
             string = var['command']
-            string.replace('%', img, 1)
-            print(string)
+            string = string.replace('%', img)
+            os.system(string)
 
 
 config = Config('config.ini')
