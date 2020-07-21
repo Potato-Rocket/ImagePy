@@ -6,7 +6,8 @@ import csv
 import math
 import getopt
 import colorsys
-import configparser as cp
+import subprocess
+import configparser
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -291,7 +292,7 @@ class GetColors:
 class Config:
     # Initiates the class to get the data from a config file
     def __init__(self, directory):
-        self.config = cp.ConfigParser()
+        self.config = configparser.ConfigParser()
         self.file = directory
 
     # Reads the config files, and adds/overwrites values based on command line inputs
@@ -364,17 +365,32 @@ class Config:
         return value
 
 
+class Write:
+    # Initiates class which handles writing color palette
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def wallpaper(var, img):
+        if var['set']:
+            pass
+        if var['set-immediately']:
+            string = var['command']
+            string.replace('%', img, 1)
+            print(string)
+
+
 config = Config('config.ini')
 defaults, paths, algorithm = config.read()
-
 ver = defaults['verbose']
-
 try:
     print(paths['image'])
 except KeyError:
     paths['image'] = input('Image directory: ')
 
-imgcolor = GetColors(paths['images'] + paths['image'],
+image = paths['images'] + paths['image']
+
+imgcolor = GetColors(image,
                      algorithm['binning-size'],
                      algorithm['start-threshold'],
                      algorithm['image-resize-limit'],
@@ -383,3 +399,5 @@ imgcolor = GetColors(paths['images'] + paths['image'],
 imgcolor.run()
 
 wallpaper = config.getwalkeys()
+write = Write()
+write.wallpaper(wallpaper, image)
