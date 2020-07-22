@@ -101,7 +101,8 @@ class GetColors:
     # Get HSV value from RGB concisely
     @staticmethod
     def gethsv(rgb):
-        hsv = colorsys.rgb_to_hsv(rgb[0], rgb[1], rgb[2])
+        raw = colorsys.rgb_to_hsv(rgb[0], rgb[1], rgb[2])
+        hsv = [int(raw[0] * 256), int(raw[1] * 256), int(raw[2])]
         return hsv
 
     # Returns the average color of a set of colors, using NumPy
@@ -145,7 +146,7 @@ class GetColors:
     # Sort the color pallete by hue, saturation, or value
     def sortcols(self, rgb):
         # Sort by converting to hsv
-        sort = sorted(rgb, key=lambda x: (self.gethsv(x)[0], self.gethsv(x)[2], self.gethsv(x)[1]))
+        sort = sorted(rgb, key=lambda x: (self.gethsv(x)[0], self.gethsv(x)[2], self.gethsv(x)[1]), reverse=True)
         # Separate and return the colors and lengths
         return sort
 
@@ -214,9 +215,6 @@ class GetColors:
         # Reshape the 2D pixel array to a 1D pixel array
         px = np.reshape(arr, (self.count, 3))
 
-        # Removes all colors darker than [16, 16, 16]
-        px = px[np.logical_not(np.logical_and(px[:, 0] <= dark, px[:, 1] <= dark, px[:, 2] <= dark))]
-
         data = pd.DataFrame(np.append(px, np.ones((len(px), 1)), axis=1),
                             columns=['R', 'G', 'B', 'Count'], dtype=np.long)
         data = data.groupby(['R', 'G', 'B']).agg({'R': 'first',
@@ -224,6 +222,10 @@ class GetColors:
                                                   'B': 'first',
                                                   'Count': 'sum'}).reset_index(drop=True)
         px = np.array(data)
+        # Removes all colors darker than the limit
+        hsv = np.apply_along_axis(self.gethsv, 1, px)
+        px = px[np.where(np.logical_and(hsv[:, 1] >= dark, hsv[:, 2] >= dark))]
+
         verbose(str(len(px)) + ' unique colors to group.')
         # Return the new array
         return px
@@ -414,12 +416,11 @@ class Write:
             verbose(string)
             os.system(string)
 
-    @staticmethod
-    def colorpalette(cfg, files):
+    def colorpalette(self, cfg, files):
         print('Updating color scheme...')
         with open('Palette.txt', 'r') as file:
             colors = file.readlines()[2:]
-        colors = [col[:-1] for col in colors]
+        colors = [col.strip('\n') for col in colors]
         for conf in files:
             args = cfg.getcustomsection('user/' + conf)
             if args != {}:
@@ -430,6 +431,41 @@ class Write:
                 endind = lines.index(args['end-comment'].strip('\'').strip('\"') + '\n')
                 startlines = lines[:startind + 1]
                 endlines = lines[endind:]
+                inds = self.getindexes(args['colors'])
+                cols = [colors[x] for x in inds]
+                nums = self.getindexes(args['numbers'])
+                midlines = []
+                for x in nums:
+                    ind = x % len(cols)
+                    line = args['line']
+                    midlines.append(line.replace('%C', cols[ind]).replace('%N', str(x)) + '\n')
+                lines = startlines
+                lines.extend(midlines)
+                lines.extend(endlines)
+                with open(args['file'], 'w') as file:
+                    file.writelines(lines)
+
+    @staticmethod
+    def getindexes(string):
+        inds = string.split()
+        out = []
+        for col in inds:
+            if ':' in col:
+                rng = col.split(':')
+                try:
+                    rng[0] = int(rng[0])
+                    rng[1] = int(rng[1])
+                except ValueError:
+                    pass
+                else:
+                    for x in range(rng[0], rng[1]):
+                        out.append(x)
+            else:
+                try:
+                    out.append(int(col))
+                except ValueError:
+                    pass
+        return out
 
 
 config = Config('config.ini')
