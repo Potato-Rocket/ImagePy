@@ -403,7 +403,7 @@ class Write:
                     print('Error: Specified comment not found in specified file.')
                 else:
                     lines[index] = line
-                    verbose(''.join(lines))
+                    verbose(var['file'])
                     with open(var['file'], 'w') as file:
                         file.writelines(lines)
 
@@ -417,10 +417,19 @@ class Write:
     @staticmethod
     def colorpalette(cfg, files):
         print('Updating color scheme...')
-        for file in files:
-            args = cfg.getcustomsection('user/' + file)
+        with open('Palette.txt', 'r') as file:
+            colors = file.readlines()[2:]
+        colors = [col[:-1] for col in colors]
+        for conf in files:
+            args = cfg.getcustomsection('user/' + conf)
             if args != {}:
-                verbose(file.capitalize())
+                verbose(args['file'])
+                with open(args['file'], 'r') as file:
+                    lines = file.readlines()
+                startind = lines.index(args['start-comment'].strip('\'').strip('\"') + '\n')
+                endind = lines.index(args['end-comment'].strip('\'').strip('\"') + '\n')
+                startlines = lines[:startind + 1]
+                endlines = lines[endind:]
 
 
 config = Config('config.ini')
