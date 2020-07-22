@@ -325,7 +325,8 @@ class Config:
     def getkeys(self):
         self.config.read(self.file)
         dflt = {'palette-size': self.getkey('Defaults', 'palette-size', 8, 'int'),
-                'color-value-limit': self.getkey('Defaults', 'color-value-limit', 16, 'int')}
+                'color-value-limit': self.getkey('Defaults', 'color-value-limit', 16, 'int'),
+                'config-files': self.getkey('Defaults', 'config-files', '', 'string').split()}
 
         pth = {'images': self.getkey('Paths', 'images', '', 'string')}
 
@@ -344,6 +345,19 @@ class Config:
                'set-immediately': self.getkey('Wallpaper', 'set-immediately', False, 'bool'),
                'command': self.getkey('Wallpaper', 'command', '', 'string')}
         return wal
+
+    def getcustomsection(self, section):
+        array = [self.getkey(section, 'file', '', 'string'),
+                 self.getkey(section, 'start-comment', '', 'string'),
+                 self.getkey(section, 'end-comment', '', 'string'),
+                 self.getkey(section, 'line', '', 'string'),
+                 self.getkey(section, 'colors', '', 'string'),
+                 self.getkey(section, 'numbers', '', 'string')]
+        if '' in array:
+            return {}
+        else:
+            return {'file': array[0], 'start-comment': array[1], 'end-comment': array[2],
+                    'line': array[3], 'colors': array[4], 'numbers': array[5]}
 
     # Gets a certain key with  a certain data type from the config file
     # If it hits an error, it returns the default value
@@ -376,7 +390,7 @@ class Write:
         if var['set']:
             print('Setting wallpaper...')
             line = var['line']
-            line = line.replace('%', img) + '\n'
+            line = line.replace('%B', img) + '\n'
             try:
                 with open(var['file'], 'r') as file:
                     lines = file.readlines()
@@ -389,14 +403,24 @@ class Write:
                     print('Error: Specified comment not found in specified file.')
                 else:
                     lines[index] = line
+                    verbose(''.join(lines))
                     with open(var['file'], 'w') as file:
                         file.writelines(lines)
 
         if var['set-immediately']:
             print('Updating wallpaper...')
             string = var['command']
-            string = string.replace('%', '\'' + img + '\'')
+            string = string.replace('%B', '\'' + img + '\'')
+            verbose(string)
             os.system(string)
+
+    @staticmethod
+    def colorpalette(cfg, files):
+        print('Updating color scheme...')
+        for file in files:
+            args = cfg.getcustomsection('user/' + file)
+            if args != {}:
+                verbose(file.capitalize())
 
 
 config = Config('config.ini')
@@ -420,3 +444,4 @@ imgcolor.run()
 wallpaper = config.getwalkeys()
 write = Write()
 write.wallpaper(wallpaper, image)
+write.colorpalette(config, defaults['config-files'])
