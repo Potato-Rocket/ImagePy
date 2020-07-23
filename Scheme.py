@@ -146,7 +146,7 @@ class GetColors:
     # Sort the color pallete by hue, saturation, or value
     def sortcols(self, rgb):
         # Sort by converting to hsv
-        sort = sorted(rgb, key=lambda x: (self.gethsv(x)[0], self.gethsv(x)[2], self.gethsv(x)[1]), reverse=True)
+        sort = sorted(rgb, key=lambda x: (self.gethsv(x)[0], self.gethsv(x)[2], self.gethsv(x)[1]))
         # Separate and return the colors and lengths
         return sort
 
@@ -224,7 +224,7 @@ class GetColors:
         px = np.array(data)
         # Removes all colors darker than the limit
         hsv = np.apply_along_axis(self.gethsv, 1, px)
-        px = px[np.where(np.logical_and(hsv[:, 1] >= dark, hsv[:, 2] >= dark))]
+        px = px[np.where(np.logical_or(hsv[:, 1] >= dark, hsv[:, 2] >= dark))]
 
         verbose(str(len(px)) + ' unique colors to group.')
         # Return the new array
@@ -392,7 +392,7 @@ class Write:
         if var['set']:
             print('Setting wallpaper...')
             line = var['line']
-            line = line.replace('%B', img) + '\n'
+            line = line.replace('%B', img).strip('\'') + '\n'
             try:
                 with open(var['file'], 'r') as file:
                     lines = file.readlines()
@@ -400,7 +400,7 @@ class Write:
                 print('Error: No such file or directory: ' + var['file'])
             else:
                 try:
-                    index = lines.index(var['comment'].strip('\'').strip('\"') + '\n') + 1
+                    index = lines.index(var['comment'].strip('\'') + '\n') + 1
                 except ValueError:
                     print('Error: Specified comment not found in specified file.')
                 else:
@@ -435,10 +435,10 @@ class Write:
                 cols = [colors[x] for x in inds]
                 nums = self.getindexes(args['numbers'])
                 midlines = []
-                for x in nums:
+                for x in range(len(nums)):
                     ind = x % len(cols)
                     line = args['line']
-                    midlines.append(line.replace('%C', cols[ind]).replace('%N', str(x)) + '\n')
+                    midlines.append(line.replace('%C', cols[ind]).replace('%N', str(nums[x])) + '\n')
                 lines = startlines
                 lines.extend(midlines)
                 lines.extend(endlines)
