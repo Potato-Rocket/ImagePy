@@ -146,8 +146,10 @@ class GetColors:
     # Sort the color pallete by hue, saturation, or value
     def sortcols(self, rgb):
         # Sort by converting to hsv
-        sort = sorted(rgb, key=lambda x: (self.gethsv(x)[0], self.gethsv(x)[2], self.gethsv(x)[1]))
-        # Separate and return the colors and lengths
+        intensity = [list(i) for i in sorted(rgb, key=lambda x: self.gethsv(x)[1] * self.gethsv(x)[2])]
+        top = sorted(intensity[4:], key=lambda x: self.gethsv(x)[0], reverse=True)
+        bottom = sorted(intensity[:4], key=lambda x: self.gethsv(x)[1])
+        sort = bottom + top
         return sort
 
     # Get variance of a set of pixels
