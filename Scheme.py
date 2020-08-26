@@ -425,25 +425,29 @@ class Write:
             args = cfg.getcustomsection('user/' + conf)
             if args != {}:
                 verbose(args['file'])
-                with open(args['file'], 'r') as file:
-                    lines = file.readlines()
-                startind = lines.index(args['start-comment'].strip('\'').strip('\"') + '\n')
-                endind = lines.index(args['end-comment'].strip('\'').strip('\"') + '\n')
-                startlines = lines[:startind + 1]
-                endlines = lines[endind:]
-                inds = self.getindexes(args['colors'])
-                cols = [colors[x] for x in inds]
-                nums = self.getindexes(args['numbers'])
-                midlines = []
-                for x in range(len(nums)):
-                    ind = x % len(cols)
-                    line = args['line']
-                    midlines.append(line.replace('%C', cols[ind]).replace('%N', str(nums[x])) + '\n')
-                lines = startlines
-                lines.extend(midlines)
-                lines.extend(endlines)
-                with open(args['file'], 'w') as file:
-                    file.writelines(lines)
+                try:
+                    with open(args['file'], 'r') as file:
+                        lines = file.readlines()
+                except FileNotFoundError:
+                    print('Error: ' + args['file'] + ' does not exist.')
+                else:
+                    startind = lines.index(args['start-comment'].strip('\'').strip('\"') + '\n')
+                    endind = lines.index(args['end-comment'].strip('\'').strip('\"') + '\n')
+                    startlines = lines[:startind + 1]
+                    endlines = lines[endind:]
+                    inds = self.getindexes(args['colors'])
+                    cols = [colors[x] for x in inds]
+                    nums = self.getindexes(args['numbers'])
+                    midlines = []
+                    for x in range(len(nums)):
+                        ind = x % len(cols)
+                        line = args['line']
+                        midlines.append(line.replace('%C', cols[ind]).replace('%N', str(nums[x])) + '\n')
+                    lines = startlines
+                    lines.extend(midlines)
+                    lines.extend(endlines)
+                    with open(args['file'], 'w') as file:
+                        file.writelines(lines)
 
     @staticmethod
     def getindexes(string):
