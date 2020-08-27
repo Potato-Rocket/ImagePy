@@ -17,7 +17,7 @@ It gets the color palette in five separate phases:
 The config file (named 'config.ini') should be in the same directory as the program. You should have a sample config file which you downloaded along with the program, which contains only the most basic sections. It should be commented enough to explain how to use it. It should work just fine without any modification, however It is recommended to set a default image path at the very least for convenience.
 
 ### Running
-When you run this program from your Linux terminalu sing python, you can add these tags to give your inputs more efficiently.
+When you run this program from your Linux terminalu sing python, you can add these arguments to give your inputs more efficiently.
 - "-i" or "--image" [image name] for the input image's name.
 - "-f" or "--full" to make the image input specify the full directory.
 - "-v" or "--verbose" for verbose output.
