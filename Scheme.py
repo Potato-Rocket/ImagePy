@@ -14,6 +14,7 @@ from multiprocessing import Process, cpu_count
 
 
 def verbose(string):
+    # Only prints a string if verbose output is enabled
     if ver:
         print(string)
 
@@ -145,10 +146,15 @@ class GetColors:
 
     # Sort the color pallete by hue, saturation, or value
     def sortcols(self, rgb):
-        # Sort by converting to hsv
+        # Sort by the hue and saturation, combined through multiplication, to get color intensity
         intensity = [list(i) for i in sorted(rgb, key=lambda x: self.gethsv(x)[1] * self.gethsv(x)[2])]
-        top = sorted(intensity[4:], key=lambda x: self.gethsv(x)[0], reverse=True)
-        bottom = sorted(intensity[:4], key=lambda x: self.gethsv(x)[1])
+        # Get half the length of the color palette
+        length = int(math.floor(len(intensity) / 2))
+        # Sort the top half of colors by hue, with reds at the top
+        top = sorted(intensity[length:], key=lambda x: self.gethsv(x)[0], reverse=True)
+        # Sort the bottom half of colors by saturation
+        bottom = sorted(intensity[:len(intensity) - length], key=lambda x: self.gethsv(x)[1])
+        # Combine the sorted top and bottom halves and return the colors
         sort = bottom + top
         return sort
 
@@ -302,8 +308,10 @@ class Config:
 
     # Reads the config files, and adds/overwrites values based on command line inputs
     def read(self):
+        # Read the basic keys from the config file
         dflt, pth, alg = self.getkeys()
 
+        # Get the command line arguments and make sure they are correct
         args = sys.argv[1:]
         short = 'i:fv'
         long = ['image=', 'full', 'verbose']
@@ -313,8 +321,8 @@ class Config:
             print(str(error))
             sys.exit(2)
 
+        # Get the inputs and set valuse from the command line arguments
         dflt['verbose'] = False
-
         for arg, val in arguments:
             if arg in ('-i', '--image'):
                 pth['image'] = val
@@ -323,40 +331,51 @@ class Config:
             if arg in ('-v', '--verbose'):
                 dflt['verbose'] = True
 
+        # Return the keys, which may have been overridden by the command line inputs
         return dflt, pth, alg
 
     # Reads the config file to get all necessary alues, and returns dictionaries
     def getkeys(self):
+        # Read the config file
         self.config.read(self.file)
+        # Get all the keys from the default section and add them to a dictionary
         dflt = {'palette-size': self.getkey('Defaults', 'palette-size', 8, 'int'),
                 'color-value-limit': self.getkey('Defaults', 'color-value-limit', 16, 'int'),
                 'config-files': self.getkey('Defaults', 'config-files', '', 'string').split()}
 
+        # Get the path from the paths section, and add it to a dictionary
         pth = {'images': self.getkey('Paths', 'images', '', 'string')}
 
+        # Get the keys from the algorithm section, and add them to a dictionary
         alg = {'start-threshold': self.getkey('Algorithm', 'start-threshold', 64, 'int'),
                'binning-size': self.getkey('Algorithm', 'binning-size', 9, 'int'),
                'binning-variance-limit': self.getkey('Algorithm', 'binning-variance-limit', 32, 'int'),
                'image-resize-limit': self.getkey('Algorithm', 'image-resize-limit', 1920, 'int')}
+        # Return all three dictionaries
         return dflt, pth, alg
 
     # Reads values necessary to write the wallpaper
     def getwalkeys(self):
+        # Get all the keys from the wallpaper section and add them to a dictionary
         wal = {'file': self.getkey('Wallpaper', 'file', '', 'string'),
                'comment': self.getkey('Wallpaper', 'comment', '', 'string'),
                'line': self.getkey('Wallpaper', 'line', '', 'string'),
                'set': self.getkey('Wallpaper', 'set', False, 'bool'),
                'set-immediately': self.getkey('Wallpaper', 'set-immediately', False, 'bool'),
                'command': self.getkey('Wallpaper', 'command', '', 'string')}
+        # Return the dictionary
         return wal
 
+    # Reads the values from a custom section necessary to write the palette to a config file
     def getcustomsection(self, section):
+        # Get the keys from the section, and add them too a dictionary
         array = [self.getkey(section, 'file', '', 'string'),
                  self.getkey(section, 'start-comment', '', 'string'),
                  self.getkey(section, 'end-comment', '', 'string'),
                  self.getkey(section, 'line', '', 'string'),
                  self.getkey(section, 'colors', '', 'string'),
                  self.getkey(section, 'numbers', '', 'string')]
+        # If a key returns empty, return nothing
         if '' in array:
             return {}
         else:
@@ -389,23 +408,31 @@ class Write:
     def __init__(self):
         pass
 
+    # Sets the desktop wallpeper based on the source image
     @staticmethod
     def wallpaper(var, img):
+        # Checks if it should update the config file
         if var['set']:
             print('Setting wallpaper...')
+            # Generste the line to set the wallpaper
             line = var['line']
             line = line.replace('%B', img).strip('\'') + '\n'
+            # Try to open the config file
+            # If sucessful keep going
             try:
                 with open(var['file'], 'r') as file:
                     lines = file.readlines()
             except FileNotFoundError:
                 print('Error: No such file or directory: ' + var['file'])
             else:
+                # Try to find the comment
+                # If succesful keep going
                 try:
                     index = lines.index(var['comment'].strip('\'') + '\n') + 1
                 except ValueError:
                     print('Error: Specified comment not found in specified file.')
                 else:
+                    # Replace the line after the comment with the generated line, and write the file
                     lines[index] = line
                     verbose(var['file'])
                     with open(var['file'], 'w') as file:
@@ -418,39 +445,52 @@ class Write:
             verbose(string)
             os.system(string)
 
+    # Writes to each config file as specified by custom sections
     def colorpalette(self, cfg, files):
         print('Updating color scheme...')
+        # Get the color pallete
         with open('Palette.txt', 'r') as file:
             colors = file.readlines()[2:]
         colors = [col.strip('\n') for col in colors]
+        # For each config file
         for conf in files:
+            # Try to get the keys from the custom section
             args = cfg.getcustomsection('user/' + conf)
             if args != {}:
                 verbose(args['file'])
+                # Try to open the config file
+                # If successful, proceed
                 try:
                     with open(args['file'], 'r') as file:
                         lines = file.readlines()
                 except FileNotFoundError:
                     print('Error: ' + args['file'] + ' does not exist.')
                 else:
+                    # Split the lines into chunks based on whene the start and end comments are
                     startind = lines.index(args['start-comment'].strip('\'').strip('\"') + '\n')
                     endind = lines.index(args['end-comment'].strip('\'').strip('\"') + '\n')
                     startlines = lines[:startind + 1]
                     endlines = lines[endind:]
+                    # Get which colors to use and how to assign them
                     inds = self.getindexes(args['colors'])
                     cols = [colors[x] for x in inds]
                     nums = self.getindexes(args['numbers'])
+                    # Generate the lines to set the colors
                     midlines = []
                     for x in range(len(nums)):
                         ind = x % len(cols)
                         line = args['line']
                         midlines.append(line.replace('%C', cols[ind]).replace('%N', str(nums[x])) + '\n')
+                    # Combine the chunks and insert the lines to set the colors, then write the file
                     lines = startlines
                     lines.extend(midlines)
                     lines.extend(endlines)
                     with open(args['file'], 'w') as file:
                         file.writelines(lines)
 
+    # Interpret the index string to return a list of indexes
+    # Adds together all index ranges, which are separated by spaces
+    # Ranges can be a single index, or a range of indexes, defined by two indexes separated by a colon
     @staticmethod
     def getindexes(string):
         inds = string.split()
