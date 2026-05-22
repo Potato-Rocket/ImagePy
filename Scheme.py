@@ -32,7 +32,8 @@ class GetColors:
         try:
             self.image = Image.open(self.file)
         except FileNotFoundError:
-            print('\nFileNotFoundError: No such file or directory: \'' + self.file + '\'')
+            print('\nFileNotFoundError: No such file or directory: \'' +
+                  self.file + '\'')
             sys.exit(2)
         width, height = self.image.size
         if width > imgsize:
@@ -46,32 +47,38 @@ class GetColors:
     # Runs all functions required to get the color pallete
     def run(self):
         print('Starting binning process...')
-
+        # Splits up image for multithreading
         threads = []
         chunk = int(math.floor(self.image.height / self.cores))
-        chunks = [self.image.crop((0, t * chunk, self.image.width, (t + 1) * chunk)) for t in range(self.cores)]
+        # chunks = [self.image.crop(
+        #     (0, t * chunk, self.image.width, (t + 1) * chunk)) for t in range(self.cores)]
+        # Starts multiprocessing, the waits for all threads to finish
+        # for t in range(self.cores):
+        #     if __name__ == '__main__':
+        #         p = Process(target=self.binimage, args=(
+        #             chunks[t], self.binning, t,))
+        #         threads.append(p)
+        #         p.start()
+        # for t in threads:
+        #     t.join()
+        pixmap, width, height = self.binimage(self.image, self.binning, 0)
 
-        for t in range(self.cores):
-            p = Process(target=self.binimage, args=(chunks[t], self.binning, t,))
-            threads.append(p)
-            p.start()
-        for t in threads:
-            t.join()
+        # Combines data generated from all threads
+        # verbose('Combining threads...')
+        # pixmap = np.array([])
+        # width = 0
+        # height = 0
+        # for r in range(1):
+        #     with open('img' + str(r) + '.csv') as raw:
+        #         reader = csv.reader(raw)
+        #         for row in reader:
+        #             width = int(len(row) / 3)
+        #             height += 1
+        #             pixmap = np.append(pixmap, np.array(row))
+        #     os.remove('img' + str(r) + '.csv')
+        # pixmap = pixmap.reshape((height, width, 3)).astype(np.int64)
 
-        verbose('Combining threads...')
-        pixmap = np.array([])
-        width = 0
-        height = 0
-        for r in range(self.cores):
-            with open('img' + str(r) + '.csv') as raw:
-                reader = csv.reader(raw)
-                for row in reader:
-                    width = int(len(row) / 3)
-                    height += 1
-                    pixmap = np.append(pixmap, np.array(row))
-            os.remove('img' + str(r) + '.csv')
-        pixmap = pixmap.reshape((height, width, 3)).astype(np.int64)
-
+        # Uses generated data to build binned image for debugging
         verbose('Building binned image...')
         binned = Image.new('RGB', (width, height))
         for y in range(height):
@@ -82,20 +89,37 @@ class GetColors:
 
         self.count = pixmap.shape[0] * pixmap.shape[1]
 
+        # Repeats grouping process until desired number of threads is acquired
+        # Also has failsafe to prevent seesawing
         pixels = self.preparr(pixmap, self.value)
         print('Starting grouping process...')
+        direction = 0
         while True:
             verbose('Threshold: ' + str(self.threshold))
             colors = self.groupx(pixels, self.threshold)
             length = len(colors)
+            verbose('Length: ' + str(length))
             step = abs(length - self.palettesize)
+            if direction == 0:
+                if length < self.palettesize:
+                    direction = -1
+                else:
+                    direction = 1
             if length == self.palettesize:
                 break
             elif length < self.palettesize:
                 self.threshold -= step
+                direction = -1
             else:
-                self.threshold += step
-        print('Merging groups...')
+                if direction == 1:
+                    self.threshold += step
+                else:
+                    colors = [list(i) for i in sorted(
+                        colors, key=lambda c: self.gethsv(c)[1])][1:]
+                    break
+
+        # Puts colors a preferable order, and returns the color palette
+        print('Sorting color palette...')
         colors = self.sortcols(colors)
         self.output(colors)
 
@@ -147,13 +171,16 @@ class GetColors:
     # Sort the color pallete by hue, saturation, or value
     def sortcols(self, rgb):
         # Sort by the hue and saturation, combined through multiplication, to get color intensity
-        intensity = [list(i) for i in sorted(rgb, key=lambda x: self.gethsv(x)[1] * self.gethsv(x)[2])]
+        intensity = [list(i) for i in sorted(
+            rgb, key=lambda x: self.gethsv(x)[1] * self.gethsv(x)[2])]
         # Get half the length of the color palette
         length = int(math.floor(len(intensity) / 2))
         # Sort the top half of colors by hue, with reds at the top
-        top = sorted(intensity[length:], key=lambda x: self.gethsv(x)[0], reverse=True)
+        top = sorted(intensity[length:],
+                     key=lambda x: self.gethsv(x)[0], reverse=True)
         # Sort the bottom half of colors by saturation
-        bottom = sorted(intensity[:len(intensity) - length], key=lambda x: self.gethsv(x)[1])
+        bottom = sorted(intensity[:len(intensity) - length],
+                        key=lambda x: self.gethsv(x)[1])
         # Combine the sorted top and bottom halves and return the colors
         sort = bottom + top
         return sort
@@ -212,10 +239,11 @@ class GetColors:
                 pxmp[y][x] = px
             verbose(str(pid + 1) + ': ' + str(int((100 / h) * y)) + '%')
         verbose('Completed thread ' + str(pid + 1))
-        with open('img' + str(pid) + '.csv', 'w') as out:
-            writer = csv.writer(out)
-            shp = np.shape(pxmp)
-            writer.writerows(pxmp.reshape(shp[0], shp[1] * 3))
+        return pxmp, w, h
+        # with open('img' + str(pid) + '.csv', 'w') as out:
+        #     writer = csv.writer(out)
+        #     shp = np.shape(pxmp)
+        #     writer.writerows(pxmp.reshape(shp[0], shp[1] * 3))
 
     # Prepare pixel list for the grouping algorithm
     def preparr(self, arr, dark):
@@ -260,6 +288,7 @@ class GetColors:
             grps.append(grp)
             # Remove the pixels that were added to the group from the remaining pixels
             pix = np.delete(pix, ind, axis=0)
+        verbose('Merging groups...')
         colors = self.merge(grps)
         return colors
 
@@ -296,7 +325,8 @@ class GetColors:
             for x in range(50):
                 for y in range(100):
                     # Fill in the current color
-                    out.putpixel((x + (50 * c), y), (rgb[c][0], rgb[c][1], rgb[c][2]))
+                    out.putpixel((x + (50 * c), y),
+                                 (rgb[c][0], rgb[c][1], rgb[c][2]))
         out.save('Palette.png')
 
 
@@ -467,8 +497,10 @@ class Write:
                     print('Error: ' + args['file'] + ' does not exist.')
                 else:
                     # Split the lines into chunks based on whene the start and end comments are
-                    startind = lines.index(args['start-comment'].strip('\'').strip('\"') + '\n')
-                    endind = lines.index(args['end-comment'].strip('\'').strip('\"') + '\n')
+                    startind = lines.index(
+                        args['start-comment'].strip('\'').strip('\"') + '\n')
+                    endind = lines.index(
+                        args['end-comment'].strip('\'').strip('\"') + '\n')
                     startlines = lines[:startind + 1]
                     endlines = lines[endind:]
                     # Get which colors to use and how to assign them
@@ -480,7 +512,8 @@ class Write:
                     for x in range(len(nums)):
                         ind = x % len(cols)
                         line = args['line']
-                        midlines.append(line.replace('%C', cols[ind]).replace('%N', str(nums[x])) + '\n')
+                        midlines.append(line.replace('%C', cols[ind]).replace(
+                            '%N', str(nums[x])) + '\n')
                     # Combine the chunks and insert the lines to set the colors, then write the file
                     lines = startlines
                     lines.extend(midlines)
@@ -516,13 +549,13 @@ class Write:
 
 config = Config('config.ini')
 defaults, paths, algorithm = config.read()
-ver = defaults['verbose']
-try:
-    print(paths['image'])
-except KeyError:
-    paths['image'] = input('Image directory: ')
+ver = True
+# try:
+#     print(paths['image'])
+# except KeyError:
+#     paths['image'] = input('Image directory: ')
 
-image = paths['images'] + paths['image']
+image = paths['images'] + 'Moving Castle.jpg'
 
 imgcolor = GetColors(image,
                      algorithm['binning-size'],
@@ -532,7 +565,7 @@ imgcolor = GetColors(image,
                      defaults['color-value-limit'])
 imgcolor.run()
 
-wallpaper = config.getwalkeys()
-write = Write()
-write.wallpaper(wallpaper, image)
-write.colorpalette(config, defaults['config-files'])
+# wallpaper = config.getwalkeys()
+# write = Write()
+# write.wallpaper(wallpaper, image)
+# write.colorpalette(config, defaults['config-files'])
