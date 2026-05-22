@@ -2,7 +2,6 @@
 
 import os
 import sys
-import csv
 import math
 import getopt
 import colorsys
@@ -10,7 +9,7 @@ import configparser
 import numpy as np
 import pandas as pd
 from PIL import Image
-from multiprocessing import Process, cpu_count
+from multiprocessing import cpu_count
 
 
 def verbose(string):
@@ -47,36 +46,7 @@ class GetColors:
     # Runs all functions required to get the color pallete
     def run(self):
         print('Starting binning process...')
-        # Splits up image for multithreading
-        threads = []
-        chunk = int(math.floor(self.image.height / self.cores))
-        # chunks = [self.image.crop(
-        #     (0, t * chunk, self.image.width, (t + 1) * chunk)) for t in range(self.cores)]
-        # Starts multiprocessing, the waits for all threads to finish
-        # for t in range(self.cores):
-        #     if __name__ == '__main__':
-        #         p = Process(target=self.binimage, args=(
-        #             chunks[t], self.binning, t,))
-        #         threads.append(p)
-        #         p.start()
-        # for t in threads:
-        #     t.join()
         pixmap, width, height = self.binimage(self.image, self.binning, 0)
-
-        # Combines data generated from all threads
-        # verbose('Combining threads...')
-        # pixmap = np.array([])
-        # width = 0
-        # height = 0
-        # for r in range(1):
-        #     with open('img' + str(r) + '.csv') as raw:
-        #         reader = csv.reader(raw)
-        #         for row in reader:
-        #             width = int(len(row) / 3)
-        #             height += 1
-        #             pixmap = np.append(pixmap, np.array(row))
-        #     os.remove('img' + str(r) + '.csv')
-        # pixmap = pixmap.reshape((height, width, 3)).astype(np.int64)
 
         # Uses generated data to build binned image for debugging
         verbose('Building binned image...')
@@ -240,10 +210,6 @@ class GetColors:
             verbose(str(pid + 1) + ': ' + str(int((100 / h) * y)) + '%')
         verbose('Completed thread ' + str(pid + 1))
         return pxmp, w, h
-        # with open('img' + str(pid) + '.csv', 'w') as out:
-        #     writer = csv.writer(out)
-        #     shp = np.shape(pxmp)
-        #     writer.writerows(pxmp.reshape(shp[0], shp[1] * 3))
 
     # Prepare pixel list for the grouping algorithm
     def preparr(self, arr, dark):
@@ -252,7 +218,7 @@ class GetColors:
         px = np.reshape(arr, (self.count, 3))
 
         data = pd.DataFrame(np.append(px, np.ones((len(px), 1)), axis=1),
-                            columns=['R', 'G', 'B', 'Count'], dtype=np.long)
+                            columns=['R', 'G', 'B', 'Count'], dtype=np.int64)
         data = data.groupby(['R', 'G', 'B']).agg({'R': 'first',
                                                   'G': 'first',
                                                   'B': 'first',
@@ -549,13 +515,13 @@ class Write:
 
 config = Config('config.ini')
 defaults, paths, algorithm = config.read()
-ver = True
-# try:
-#     print(paths['image'])
-# except KeyError:
-#     paths['image'] = input('Image directory: ')
+ver = defaults['verbose']
+try:
+    print(paths['image'])
+except KeyError:
+    paths['image'] = input('Image directory: ')
 
-image = paths['images'] + 'Moving Castle.jpg'
+image = paths['images'] + paths['image']
 
 imgcolor = GetColors(image,
                      algorithm['binning-size'],
@@ -565,7 +531,7 @@ imgcolor = GetColors(image,
                      defaults['color-value-limit'])
 imgcolor.run()
 
-# wallpaper = config.getwalkeys()
-# write = Write()
-# write.wallpaper(wallpaper, image)
-# write.colorpalette(config, defaults['config-files'])
+wallpaper = config.getwalkeys()
+write = Write()
+write.wallpaper(wallpaper, image)
+write.colorpalette(config, defaults['config-files'])

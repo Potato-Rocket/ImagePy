@@ -1,6 +1,20 @@
-*
-!*.py
-!*.ini
-!.gitignore
-!README.md
-.idea
+# Generated outputs
+Binned.png
+Palette.png
+Palette.txt
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.toc
+*.synctex.gz
+
+# Python
+__pycache__/
+*.pyc
+
+# uv / venv
+.venv/
+
+# IDEs
+.idea/

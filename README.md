@@ -14,10 +14,19 @@ It gets the color palette in five separate phases:
 5. Refining: Repeats the Grouping process, altering the threshold until there are the desired number of colors. It then tries to sort the colors in a preferable order.
 
 ### Setup
-The config file (named 'config.ini') should be in the same directory as the program. You should have a sample config file which you downloaded along with the program, which contains only the most basic sections. It should be commented enough to explain how to use it. It should work just fine without any modification, however It is recommended to set a default image path at the very least for convenience.
+Install dependencies with [uv](https://docs.astral.sh/uv/):
+```
+uv sync
+```
+
+The config file (`config.ini`) should be in the same directory as the program. A `sample-config.ini` is included — copy it to `config.ini` and edit from there. At minimum, set the `images` path under `[Paths]` to your wallpaper directory. The sample config is commented throughout, including an example `[user/myapp]` section for writing colors to other config files.
 
 ### Running
-When you run this program from your Linux terminalu sing python, you can add these arguments to give your inputs more efficiently.
-- "-i" or "--image" [image name] for the input image's name.
-- "-f" or "--full" to make the image input specify the full directory.
-- "-v" or "--verbose" for verbose output.
+```
+uv run python Scheme.py -i "image name.jpg"
+```
+
+Arguments:
+- `-i` / `--image` — image filename (relative to the `images` path in config)
+- `-f` / `--full` — treat the `-i` value as a full path instead
+- `-v` / `--verbose` — verbose output

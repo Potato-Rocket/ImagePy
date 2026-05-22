@@ -1,0 +1,10 @@
+[project]
+name = "imagepy"
+version = "0.1.0"
+description = "Generate a color palette from an image"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "pandas",
+    "pillow",
+]
