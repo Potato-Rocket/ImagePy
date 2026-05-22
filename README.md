@@ -13,6 +13,25 @@ It gets the color palette in five separate phases:
 4. Grouping: Groups pixels that are within a certain range from a starter pixel together and adds that group to a seperete list. It repeats this until all pixels have been grouped.
 5. Refining: Repeats the Grouping process, altering the threshold until there are the desired number of colors. It then tries to sort the colors in a preferable order.
 
+### Sample Output
+
+Source image (*Howl's Moving Castle*):
+
+![Moving Castle](sample/Moving%20Castle.jpg)
+
+Binned image (intermediate step):
+
+![Binned](sample/Binned.png)
+
+Generated palette:
+
+![Palette](sample/Palette.png)
+
+```
+#D7E7BC  #AFCB8C  #1D2E30  #537D43
+#4AC09C  #83D1A1  #7B9E56  #AE5535
+```
+
 ### Setup
 Install dependencies with [uv](https://docs.astral.sh/uv/):
 ```
