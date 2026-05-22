@@ -1,7 +1,7 @@
-# Generated outputs
-Binned.png
-Palette.png
-Palette.txt
+# Generated outputs (root-anchored so sample/ is unaffected)
+/Binned.png
+/Palette.png
+/Palette.txt
 
 # LaTeX build artifacts
 *.aux
